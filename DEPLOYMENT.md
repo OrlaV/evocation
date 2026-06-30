@@ -21,7 +21,8 @@ git push -u origin main
 
 ## 2. Vercel **[you]**
 
-1. Import the GitHub repo at vercel.com → New Project (root = `evocation/`).
+1. Import the GitHub repo (OrlaV/evocation) at vercel.com → New Project. The
+   Next app is at the repo root, so leave Root Directory as default.
 2. Framework preset: Next.js (auto-detected). No build overrides needed.
 3. Add the environment variables below (Project → Settings → Environment
    Variables), then Deploy.
