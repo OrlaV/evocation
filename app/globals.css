@@ -1,26 +1,291 @@
 @import "tailwindcss";
 
+/* Silver Arrows — brushed-aluminium light ground, graphite, corsa red.
+   Motorsport "Paddock" livery (chosen 2026-06-26, replaces Slate Bronze).
+   NOTE the naming is now intuitive: --cream = LIGHT (bg), --ink = DARK (text).
+   Dark feature bands (Process, Queue) come from `bg-ink` / the #queue override. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --cream: #e4e3df;       /* aluminium ground */
+  --cream-deep: #d8d7d1;  /* light sunken band (Proof / Footer) */
+  --cream-card: #edece8;  /* raised card */
+  --ink: #23272b;         /* graphite — text, and the dark feature-band ground */
+  --ink-soft: #5b6166;
+  /* single corsa-red accent — action / highlight / live. data tokens are a
+     neutral graphite-steel so numbers/refs read calm on the light ground. */
+  --brg: #d8261d;
+  --brg-deep: #a81b14;
+  --brg-light: #e0554c;   /* lighter red, for use on the dark bands */
+  --gold: #6a6f74;
+  --brass: #84898d;
+  --hairline: #c7c6bf;
+  --hairline-dark: rgba(35, 39, 43, 0.12);
+}
+
+/* the queue band: a dark graphite feature block on the light page (pit-board
+   feel), with a red top rule + faint red halo. Inside it, --cream is remapped
+   to light so `text-cream`/`bg-cream`/`border-cream` read on the dark ground.
+   --ink stays dark so the light ghost button's hover (text-ink on a light fill)
+   still reads. */
+#queue {
+  --cream: #ecedee;
+  background-color: #23272b !important;
+  border-top: 2px solid var(--brg);
+  background-image: radial-gradient(
+    ellipse 70% 55% at 50% 0%,
+    color-mix(in srgb, var(--brg) 14%, transparent),
+    transparent 70%
+  );
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-cream: var(--cream);
+  --color-cream-deep: var(--cream-deep);
+  --color-cream-card: var(--cream-card);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-brg: var(--brg);
+  --color-brg-deep: var(--brg-deep);
+  --color-brg-light: var(--brg-light);
+  --color-gold: var(--gold);
+  --color-brass: var(--brass);
+  --color-hairline: var(--hairline);
+  --color-hairline-dark: var(--hairline-dark);
+  --font-sans: var(--font-archivo), sans-serif;
+  --font-mono: var(--font-plex-mono), monospace;
+  --font-num: var(--font-saira), sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* display type — Archivo widened, echoes the Porsche-like wordmark */
+.font-display {
+  font-family: var(--font-archivo), sans-serif;
+  font-stretch: 118%;
+}
+/* race-number type — condensed italic Saira, for big numerals (stats, prices, EVO) */
+.font-num {
+  font-family: var(--font-saira), sans-serif;
+  font-style: italic;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+/* full-bleed to the right viewport edge (desktop) */
+@media (min-width: 981px) {
+  .bleed-right {
+    margin-right: calc(
+      -1 * (max((100vw - 1280px) / 2, 0px) + clamp(20px, 4vw, 56px))
+    );
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--cream);
+  /* perforated-metal dot matrix, barely-there */
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--ink) 4%, transparent) 1px,
+    transparent 1.5px
+  );
+  background-size: 26px 26px;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--brg);
+  color: var(--cream);
+}
+
+/* anchored sections land clear of the sticky header */
+:where(section[id]) {
+  scroll-margin-top: 72px;
+}
+
+/* consistent keyboard focus, theme-tinted */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--brg);
+  outline-offset: 2px;
+}
+
+/* paper grain overlay */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* shared layout container */
+.wrap {
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: clamp(20px, 4vw, 56px);
+}
+
+/* typographic atoms */
+.label-mono {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* cut-corner (chamfer) — the race-decal notch from the design system */
+.chamfer {
+  clip-path: polygon(
+    0 0,
+    calc(100% - 9px) 0,
+    100% 9px,
+    100% 100%,
+    9px 100%,
+    0 calc(100% - 9px)
+  );
+}
+
+/* hatched photo placeholder */
+.hatch {
+  background:
+    repeating-linear-gradient(
+      45deg,
+      transparent 0 9px,
+      color-mix(in srgb, var(--ink) 5%, transparent) 9px 10px
+    ),
+    var(--cream-deep);
+}
+
+/* exploded-view drawing inherits theme colors */
+.exploded [stroke="#1A1714"] {
+  stroke: var(--ink);
+}
+.exploded [stroke="#1F4D36"] {
+  stroke: var(--brg);
+}
+.exploded [stroke="#4A443C"] {
+  stroke: var(--ink-soft);
+}
+.exploded [fill="#1A1714"] {
+  fill: var(--ink);
+}
+.exploded [fill="#4A443C"] {
+  fill: var(--ink-soft);
+}
+
+/* marquee */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee 36s linear infinite;
+}
+.marquee-mask {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+}
+.marquee-paused:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-marquee {
+    animation: none;
+  }
+}
+
+/* ===================================================================
+   LOCKED STYLE — "Editorial" (chosen 2026-06-21)
+   <html> carries data-ui="d" permanently; these rules are the site look.
+   Dramatic widened display, generous air, clean ground (no dot matrix),
+   tiny far-tracked accent captions, accent-ruled cards. Colour is locked
+   to Slate Bronze (:root). Fold into the base if the attribute is ever
+   dropped; for now data-ui="d" is hardcoded in app/layout.tsx.
+   =================================================================== */
+
+/* ---- Editorial : typographie dramatique, plein d'air, filets accent ---- */
+html[data-ui="d"] body {
+  background-image: none; /* drop the dot matrix */
+  font-weight: 450; /* slightly heavier base for legibility */
+}
+html[data-ui="d"] body::after {
+  opacity: 0.1; /* whisper of grain only */
+}
+html[data-ui="d"] .ui-deco,
+html[data-ui="d"] [aria-label="Page sections"] {
+  display: none !important;
+}
+/* roomy but restrained — was too tall on shorter laptop screens */
+html[data-ui="d"] main > section {
+  padding-block: clamp(58px, 8vh, 118px) !important;
+}
+/* the hero is a full-bleed dark photo band — it sets its own height/padding */
+html[data-ui="d"] main > section.hero-dark {
+  padding-block: 0 !important;
+  border-top: 0;
+}
+/* oversized, widened, tight display type */
+html[data-ui="d"] .font-display {
+  font-stretch: 125%;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* red reads only when large + bold — on dark grounds, demote small mono
+   labels (otherwise red on graphite) to a light grey. Large red headlines
+   keep their accent. */
+html[data-ui="d"] .bg-ink .label-mono:not(a):not(button),
+html[data-ui="d"] #queue .label-mono:not(a):not(button),
+html[data-ui="d"] .hero-dark .label-mono:not(a):not(button) {
+  color: #c7cbce !important;
+}
+/* dramatic editorial headline — the dominant change above the fold */
+html[data-ui="d"] main h1.font-display {
+  font-size: clamp(3.4rem, 8.6vw, 6.6rem) !important;
+  line-height: 0.95 !important;
+}
+/* section titles scale up to match the gallery feel */
+html[data-ui="d"] main section h2.font-display {
+  font-size: clamp(2.1rem, 4.4vw, 3.6rem) !important;
+}
+/* mono labels -> tiny, far-tracked accent captions.
+   :not(a):not(button) so the recolor never paints button copy bronze-on-bronze
+   (buttons carry .label-mono on the element itself + their own text-* colour) */
+html[data-ui="d"] .label-mono {
+  font-size: 0.66rem !important;
+  letter-spacing: 0.22em;
+}
+html[data-ui="d"] .label-mono:not(a):not(button) {
+  color: var(--brg);
+}
+/* cards: borderless, square, with a filed-under accent rule on top */
+html[data-ui="d"] a.bg-cream-card {
+  border: none !important;
+  border-top: 2px solid var(--brg) !important;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--ink) 2%, var(--cream-card));
+}
+html[data-ui="d"] a.bg-cream-card > .hatch {
+  border-bottom: none;
+}
+html[data-ui="d"] #registry .grid {
+  gap: clamp(36px, 5vw, 72px) !important;
 }

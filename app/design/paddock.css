@@ -1,0 +1,653 @@
+/* ============================================================
+   EVOCATION · PADDOCK — design system (motorsport / timing screen)
+   Livery: SILVER ARROWS — brushed aluminium · graphite · corsa red.
+   Scoped to .pad — does not touch the live site. No background grid.
+   ============================================================ */
+
+/* hide the live Header/Footer only while a Paddock page is mounted */
+body:has(.pad-page) {
+  background: #e4e3df !important;
+  background-image: none !important;
+}
+body:has(.pad-page) > header,
+body:has(.pad-page) > footer {
+  display: none !important;
+}
+
+.pad {
+  /* aluminium / steel surfaces (light) */
+  --track: #e4e3df;   /* page ground */
+  --track-2: #edece8; /* raised panel / rows */
+  --track-3: #d8d7d1; /* sunken / inputs */
+  --track-4: #cfcec8;
+  --line: #c7c6bf;
+  --line-2: #b0afa7;
+  /* graphite / aluminium accents */
+  --graphite: #2c3137; /* dark blocks: header bezel, pit board */
+  --graphite-2: #3a4047;
+  --alu: #b9bdc0;      /* brushed aluminium */
+  /* text (graphite on light) */
+  --paint: #23272b;
+  --paint-2: #5b6166;
+  --paint-3: #8a8f92;
+  /* corsa red — action / highlight / live (the single hot accent) */
+  --signal: #d8261d;
+  --signal-deep: #a81b14;
+  --redline: #d8261d;
+  /* sector timing colours (deepened to read on light) */
+  --sec-green: #2f9e4a;
+  --sec-yellow: #d99a1c;
+  --sec-purple: #864fd0;
+
+  /* type roles */
+  --display: var(--font-archivo-x), system-ui, sans-serif;
+  --num: var(--font-saira-c), "Arial Narrow", sans-serif;
+  --mono: var(--font-mono-x), ui-monospace, monospace;
+
+  --measure: 1320px;
+  --pad: clamp(18px, 5vw, 60px);
+  --notch: 9px;
+}
+
+/* ---------- page shell ---------- */
+.pad-page {
+  min-height: 100vh;
+  background-color: var(--track);
+  /* clean brushed-metal ground: soft top sheen, no grid */
+  background-image:
+    radial-gradient(125% 70% at 50% -12%, color-mix(in srgb, #fff 55%, transparent), transparent 62%),
+    linear-gradient(180deg, color-mix(in srgb, #fff 22%, transparent), transparent 320px);
+  background-repeat: no-repeat;
+  color: var(--paint);
+  font-family: var(--display);
+  -webkit-font-smoothing: antialiased;
+}
+.pad ::selection {
+  background: var(--signal);
+  color: #fff;
+}
+.pad-wrap {
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding-inline: var(--pad);
+}
+
+/* ---------- typography ---------- */
+.pad-display {
+  font-family: var(--display);
+  font-weight: 800;
+  font-stretch: 125%;
+  text-transform: uppercase;
+  letter-spacing: 0.005em;
+  line-height: 0.92;
+  color: var(--paint);
+}
+.pad-num {
+  font-family: var(--num);
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: -0.01em;
+  line-height: 0.85;
+  font-variant-numeric: tabular-nums;
+  color: var(--paint);
+}
+.pad-body {
+  font-family: var(--display);
+  font-weight: 400;
+  font-stretch: 100%;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.55;
+  color: var(--paint-2);
+}
+.pad-label {
+  font-family: var(--mono);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.64rem;
+  color: var(--paint-2);
+}
+.pad-mono,
+.pad-data {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--paint);
+}
+.signal { color: var(--signal); }
+.redline { color: var(--redline); }
+.muted { color: var(--paint-2); }
+
+/* ---------- accent rule + decal ticker ---------- */
+/* (was a two-tone curb/hazard stripe — replaced with a clean red rule) */
+.hazard {
+  height: 3px;
+  background: var(--signal);
+}
+.decalbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.2rem;
+  align-items: center;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.62rem;
+  color: var(--paint-3);
+}
+.decalbar .sep { color: var(--signal); }
+
+/* ---------- sections ---------- */
+.pad-section {
+  padding-block: clamp(54px, 9vh, 116px);
+  border-top: 1px solid var(--line);
+}
+.section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: clamp(26px, 5vh, 52px);
+}
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6ch;
+}
+.kicker::before {
+  content: "";
+  width: 22px;
+  height: 3px;
+  background: var(--signal);
+}
+.h2 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-stretch: 125%;
+  text-transform: uppercase;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 0.95;
+  margin-top: 0.5rem;
+}
+.ghost-no {
+  font-family: var(--num);
+  font-style: italic;
+  font-weight: 800;
+  font-size: clamp(4rem, 13vw, 11rem);
+  line-height: 0.8;
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--line-2);
+  user-select: none;
+  pointer-events: none;
+  transform: skewX(-6deg);
+}
+
+/* ---------- buttons ---------- */
+.rbtn {
+  --notch: 9px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--display);
+  font-weight: 700;
+  font-stretch: 112%;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.82rem;
+  padding: 0.85em 1.4em;
+  background: var(--signal);
+  color: #fff;
+  border: 0;
+  cursor: pointer;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--notch)) 0,
+    100% var(--notch),
+    100% 100%,
+    var(--notch) 100%,
+    0 calc(100% - var(--notch))
+  );
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+.rbtn:hover {
+  background: var(--signal-deep);
+  transform: translateY(-1px);
+}
+.rbtn .arrow { transition: transform 0.2s ease; }
+.rbtn:hover .arrow { transform: translateX(4px); }
+.rbtn-outline {
+  background: transparent;
+  color: var(--paint);
+  box-shadow: inset 0 0 0 1.5px var(--line-2);
+}
+.rbtn-outline:hover {
+  background: var(--signal);
+  color: #fff;
+  box-shadow: inset 0 0 0 1.5px var(--signal);
+}
+.rbtn-ghost {
+  background: transparent;
+  color: var(--paint);
+  clip-path: none;
+  padding-inline: 0.2em;
+}
+.rbtn-ghost:hover {
+  background: transparent;
+  color: var(--signal);
+  transform: none;
+}
+.rbtn-icon {
+  width: 2.7em;
+  height: 2.7em;
+  padding: 0;
+  justify-content: center;
+}
+
+/* ---------- input field (pit lane) ---------- */
+.field {
+  display: flex;
+  align-items: stretch;
+  background: var(--track-2);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.field input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 0.9em 1em;
+  font-family: var(--mono);
+  font-size: 0.84rem;
+  letter-spacing: 0.04em;
+  color: var(--paint);
+  outline: none;
+}
+.field input::placeholder {
+  color: var(--paint-3);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+}
+.field .field-btn {
+  border: 0;
+  background: var(--signal);
+  color: #fff;
+  padding-inline: 1.2em;
+  font-family: var(--display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.74rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.field .field-btn:hover { background: var(--signal-deep); }
+.pad :is(input):focus-visible,
+.pad :is(button, a):focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+/* ---------- decals / status tags ---------- */
+.decal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6ch;
+  font-family: var(--mono);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.6rem;
+  padding: 0.35em 0.7em;
+  color: var(--paint);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.decal .pip { width: 5px; height: 5px; background: var(--signal); }
+.decal-signal {
+  background: var(--signal);
+  color: #fff;
+  box-shadow: none;
+  font-weight: 700;
+}
+.decal-live {
+  color: var(--signal);
+  box-shadow: inset 0 0 0 1px var(--signal);
+}
+.decal-live .pip {
+  background: var(--signal);
+  border-radius: 50%;
+  animation: blink 1.1s steps(1) infinite;
+}
+
+/* ---------- start lights ---------- */
+.lights { display: inline-flex; gap: 7px; }
+.lights i {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #c4bdbb;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  display: block;
+}
+.lights i.on {
+  background: var(--signal);
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--signal) 55%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #fff 35%, transparent);
+}
+
+/* ---------- sector bars ---------- */
+.sectors { display: inline-flex; gap: 4px; }
+.sectors b { width: 26px; height: 6px; background: var(--line-2); display: block; }
+.sectors b.g { background: var(--sec-green); }
+.sectors b.y { background: var(--sec-yellow); }
+.sectors b.p { background: var(--sec-purple); }
+
+/* ---------- swatches (paint chips) ---------- */
+.chip { background: var(--track-2); padding: 0; }
+.chip .fill {
+  height: 92px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--paint) 8%, transparent);
+}
+.chip .meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.7rem 0.85rem 0.85rem;
+  gap: 0.5rem;
+}
+
+/* ---------- standings board (the registry) ---------- */
+.board { box-shadow: 0 0 0 1px var(--line-2); }
+.board-head,
+.standing {
+  display: grid;
+  grid-template-columns: 54px 78px minmax(0, 1fr) 132px 96px 44px;
+  align-items: center;
+  gap: 0.6rem;
+}
+.board-head {
+  padding: 0.7rem 1rem;
+  background: var(--graphite); /* dark monitor bezel strip */
+  border-bottom: 1px solid var(--graphite);
+}
+.board-head span {
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.58rem;
+  color: #b9bdc0;
+}
+.standing {
+  padding: 0.85rem 1rem;
+  background: var(--track-2);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  transition: background 0.18s ease;
+}
+.standing:nth-child(even) { background: var(--track); }
+.standing::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background 0.18s ease;
+}
+.standing:hover { background: var(--track-3); }
+.standing:hover::before { background: var(--signal); }
+.standing .pos {
+  font-family: var(--num);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: var(--paint);
+}
+.standing .no {
+  font-family: var(--num);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--signal);
+  letter-spacing: 0.02em;
+}
+.standing .part .name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-stretch: 110%;
+  text-transform: uppercase;
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+}
+.standing .part .chassis {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--paint-3);
+  margin-top: 0.15rem;
+}
+.standing .price {
+  font-family: var(--num);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 1.25rem;
+  text-align: right;
+  color: var(--paint);
+}
+.standing .go { text-align: right; color: var(--paint-3); transition: color 0.18s ease; }
+.standing:hover .go { color: var(--signal); }
+
+/* ---------- livery card (hero number plate) ---------- */
+.livery {
+  position: relative;
+  background: var(--track-2);
+  box-shadow: 0 0 0 1px var(--line-2);
+  overflow: hidden;
+}
+.livery .plate {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  /* brushed aluminium sheen */
+  background:
+    linear-gradient(135deg, #f3f2ee 0%, #d4d3cd 52%, #e7e6e1 100%);
+  border-bottom: 1px solid var(--line-2);
+  overflow: hidden;
+}
+.livery .bignum {
+  position: absolute;
+  right: -0.06em;
+  bottom: -0.18em;
+  font-family: var(--num);
+  font-style: italic;
+  font-weight: 800;
+  font-size: clamp(8rem, 22vw, 15rem);
+  line-height: 0.7;
+  color: transparent;
+  -webkit-text-stroke: 2px color-mix(in srgb, var(--graphite) 50%, transparent);
+}
+.livery .evo {
+  position: absolute;
+  top: 0.8rem;
+  left: 0.95rem;
+  font-family: var(--mono);
+  letter-spacing: 0.16em;
+  font-size: 0.66rem;
+  color: var(--signal);
+}
+.livery .body {
+  padding: 1.1rem 1.2rem 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.livery .name {
+  font-family: var(--display);
+  font-weight: 800;
+  font-stretch: 118%;
+  text-transform: uppercase;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.livery .sub {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--paint-2);
+  letter-spacing: 0.04em;
+}
+.livery .foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.4rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+}
+.livery .foot .price {
+  font-family: var(--num);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 1.7rem;
+}
+
+/* ---------- scrutineering table ---------- */
+.scrutiny { width: 100%; border-collapse: collapse; font-family: var(--display); }
+.scrutiny th {
+  text-align: left;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.58rem;
+  font-weight: 500;
+  color: var(--paint-3);
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--line-2);
+}
+.scrutiny td {
+  padding: 0.8rem 0.85rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--paint);
+}
+.scrutiny td.ref { font-family: var(--mono); font-size: 0.76rem; color: var(--signal); }
+.scrutiny tr:last-child td { border-bottom: 0; }
+
+/* ---------- accordion ---------- */
+.acc { border-top: 1px solid var(--line); }
+.acc summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 1rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--display);
+  font-weight: 600;
+  font-stretch: 108%;
+  text-transform: uppercase;
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+}
+.acc summary::-webkit-details-marker { display: none; }
+.acc summary .pm { position: relative; width: 13px; height: 13px; flex: none; }
+.acc summary .pm::before,
+.acc summary .pm::after {
+  content: "";
+  position: absolute;
+  background: var(--signal);
+  transition: transform 0.2s ease;
+}
+.acc summary .pm::before { top: 6px; left: 0; width: 13px; height: 2px; }
+.acc summary .pm::after { left: 6px; top: 0; width: 2px; height: 13px; }
+.acc[open] summary .pm::after { transform: scaleY(0); }
+.acc .acc-body {
+  padding: 0 0 1.1rem;
+  font-family: var(--display);
+  font-weight: 400;
+  font-stretch: 100%;
+  text-transform: none;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--paint-2);
+  max-width: 60ch;
+}
+
+/* ---------- pit board (guarantee) — dark feature block ---------- */
+.pitboard {
+  background: var(--graphite);
+  box-shadow: 0 0 0 1px var(--graphite-2);
+  padding: clamp(1.4rem, 4vw, 2.4rem);
+  position: relative;
+  color: #e8e9ea;
+}
+.pitboard .seal {
+  font-family: var(--num);
+  font-style: italic;
+  font-weight: 800;
+  font-size: clamp(2.4rem, 6vw, 3.8rem);
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+.pitboard .pad-body { color: #b9bdc0; }
+.pitboard .pad-label { color: #8a9096; }
+.pitboard .decalbar { color: #8a9096; }
+
+/* ---------- queue / grid ---------- */
+.q-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.q-row .q-ref { font-family: var(--mono); font-size: 0.74rem; color: var(--signal); width: 12ch; flex: none; }
+.q-row .q-name { font-family: var(--display); font-weight: 500; font-stretch: 104%; flex: 1; font-size: 0.92rem; }
+.q-row .q-count { font-family: var(--mono); font-size: 0.72rem; color: var(--paint-2); width: 6ch; text-align: right; flex: none; }
+
+/* ---------- reveals ---------- */
+.reveal { opacity: 0; transform: translateY(13px); animation: rise 0.7s cubic-bezier(0.2, 0.6, 0.3, 1) forwards; }
+.d1 { animation-delay: 0.04s; }
+.d2 { animation-delay: 0.12s; }
+.d3 { animation-delay: 0.22s; }
+.d4 { animation-delay: 0.34s; }
+
+@keyframes rise { to { opacity: 1; transform: none; } }
+@keyframes blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0.25; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { animation: none; opacity: 1; transform: none; }
+  .decal-live .pip { animation: none; }
+}
+
+/* ---------- grid utilities ---------- */
+.g { display: grid; gap: clamp(1rem, 2.5vw, 1.5rem); }
+@media (min-width: 640px) { .sm-2 { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 980px) {
+  .lg-3 { grid-template-columns: repeat(3, 1fr); }
+  .lg-4 { grid-template-columns: repeat(4, 1fr); }
+  .lg-5 { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* standings collapse on small screens */
+@media (max-width: 720px) {
+  .board-head { display: none; }
+  .standing {
+    grid-template-columns: 40px 56px minmax(0, 1fr) 70px;
+    grid-template-areas:
+      "pos no part price"
+      "pos no chassis status";
+    row-gap: 0.3rem;
+  }
+  .standing .pos { grid-area: pos; }
+  .standing .no { grid-area: no; }
+  .standing .part { grid-area: part; }
+  .standing .status { grid-area: status; justify-self: start; }
+  .standing .price { grid-area: price; }
+  .standing .go { display: none; }
+}
