@@ -190,6 +190,14 @@ export async function POST(req: Request) {
       phone_number_collection: { enabled: true },
       billing_address_collection: "auto",
       allow_promotion_codes: true,
+      // issue a proper (VAT) invoice for every order — trade/garage buyers ask
+      // for it, and it doubles as the customer's receipt.
+      invoice_creation: {
+        enabled: true,
+        invoice_data: {
+          footer: "Evocation — pattern parts, printed to order in the UK.",
+        },
+      },
       metadata: {
         item_lines: String(lineItems.length),
         evo_no: firstEvo,

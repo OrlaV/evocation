@@ -7,6 +7,8 @@ import { SITE_URL } from "@/lib/site";
 import { vehicleSlug, vehicleKey } from "@/lib/vehicles";
 import ProductGallery from "@/components/ProductGallery";
 import FitsYourGarage from "@/components/FitsYourGarage";
+import ReviewForm from "@/components/ReviewForm";
+import { getProductReviews } from "@/lib/reviews";
 import FaqList from "@/components/FaqList";
 import BuyBox from "@/components/BuyBox";
 import Reveal from "@/components/Reveal";
@@ -69,7 +71,10 @@ export default async function ProductPage({
 
   // other published parts that fit one of the same makes
   const makes = new Set(product.fitment.map((f) => f.make).filter(Boolean));
-  const allProducts = await getPublishedProducts();
+  const [allProducts, reviewData] = await Promise.all([
+    getPublishedProducts(),
+    getProductReviews(product.id),
+  ]);
   const related = allProducts
     .filter(
       (p) =>
@@ -110,6 +115,28 @@ export default async function ProductPage({
           }),
         )
       : offer(product.price_pence),
+    // only emit ratings when real reviews exist (Google requires genuine data)
+    ...(reviewData.count
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: reviewData.average,
+            reviewCount: reviewData.count,
+          },
+          review: reviewData.reviews.slice(0, 10).map((r) => ({
+            "@type": "Review",
+            reviewRating: {
+              "@type": "Rating",
+              ratingValue: r.rating,
+              bestRating: 5,
+            },
+            author: { "@type": "Person", name: r.author_name ?? "Verified owner" },
+            ...(r.title ? { name: r.title } : {}),
+            ...(r.body ? { reviewBody: r.body } : {}),
+            datePublished: r.created_at.slice(0, 10),
+          })),
+        }
+      : {}),
   };
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -355,6 +382,72 @@ export default async function ProductPage({
               Back to the registry
             </a>
           </Reveal>
+        </div>
+
+        {/* reviews */}
+        <div className="mt-[clamp(48px,7vh,88px)]">
+          <div className="label-mono mb-6 flex items-center gap-3.5 text-ink-soft after:h-px after:flex-1 after:bg-hairline after:content-['']">
+            Reviews
+          </div>
+          {reviewData.count > 0 ? (
+            <>
+              <div className="flex items-baseline gap-3">
+                <span className="font-num text-[2rem] leading-none text-brg">
+                  {reviewData.average.toFixed(1)}
+                </span>
+                <span
+                  aria-hidden
+                  className="text-[1.1rem] tracking-[0.12em] text-brg"
+                >
+                  {"★".repeat(Math.round(reviewData.average))}
+                  <span className="text-ink-soft/40">
+                    {"★".repeat(5 - Math.round(reviewData.average))}
+                  </span>
+                </span>
+                <span className="label-mono !text-[0.66rem] text-ink-soft">
+                  {reviewData.count} review{reviewData.count > 1 ? "s" : ""}
+                </span>
+              </div>
+              <ul className="mt-6 max-w-[70ch] space-y-5">
+                {reviewData.reviews.map((r) => (
+                  <li key={r.id} className="border-t border-hairline pt-4">
+                    <div className="flex items-center gap-2.5">
+                      <span aria-hidden className="tracking-[0.1em] text-brg">
+                        {"★".repeat(r.rating)}
+                        <span className="text-ink-soft/40">
+                          {"★".repeat(5 - r.rating)}
+                        </span>
+                      </span>
+                      {r.verified_buyer && (
+                        <span className="label-mono !text-[0.56rem] !tracking-[0.1em] text-brass">
+                          Verified buyer
+                        </span>
+                      )}
+                    </div>
+                    {r.title && (
+                      <div className="font-display mt-1.5 text-[1rem] font-bold">
+                        {r.title}
+                      </div>
+                    )}
+                    {r.body && (
+                      <p className="mt-1 text-[0.95rem] leading-[1.6] text-ink-soft">
+                        {r.body}
+                      </p>
+                    )}
+                    <div className="label-mono mt-1.5 !text-[0.58rem] text-ink-soft/70">
+                      {r.author_name ?? "Verified owner"} ·{" "}
+                      {new Date(r.created_at).toLocaleDateString("en-GB")}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="text-[0.95rem] text-ink-soft">
+              No reviews yet — verified buyers can be the first.
+            </p>
+          )}
+          <ReviewForm productId={product.id} slug={product.slug} />
         </div>
 
         {/* link to the vehicle landing page (SEO + navigation) */}

@@ -518,3 +518,24 @@ export async function updateReturnAction(input: {
   revalidatePath("/account");
   return { ok: true, msg: "Saved." };
 }
+
+// Approve / reject a customer review (moderation). Approving publishes it.
+export async function moderateReviewAction(input: {
+  id: string;
+  slug: string;
+  status: "approved" | "rejected" | "pending";
+}): Promise<OrderActionResult> {
+  await requireAdmin();
+  const status = ["approved", "rejected", "pending"].includes(input.status)
+    ? input.status
+    : "pending";
+  const svc = createServiceClient();
+  const { error } = await svc
+    .from("reviews")
+    .update({ status })
+    .eq("id", input.id);
+  if (error) return { ok: false, msg: error.message };
+  revalidatePath("/admin/reviews");
+  if (input.slug) revalidatePath(`/parts/${input.slug}`);
+  return { ok: true, msg: `Review ${status}.` };
+}

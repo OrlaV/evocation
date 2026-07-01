@@ -230,7 +230,25 @@ create table if not exists public.return_requests (
 );
 create index if not exists idx_returns_order on public.return_requests (order_id);
 alter table public.return_requests enable row level security;
--- (policies for garage/returns live in migrations 014/015)
+
+-- ---------- reviews (voir migration 016) ----------
+create table if not exists public.reviews (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references public.products(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete set null,
+  author_name text,
+  rating int not null check (rating between 1 and 5),
+  title text,
+  body text,
+  status text not null default 'pending'
+    check (status in ('pending', 'approved', 'rejected')),
+  verified_buyer boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (product_id, user_id)
+);
+create index if not exists idx_reviews_product on public.reviews (product_id, status);
+alter table public.reviews enable row level security;
+-- (policies for garage/returns/reviews live in migrations 014/015/016)
 
 -- ---------- storage : images produits ----------
 insert into storage.buckets (id, name, public)

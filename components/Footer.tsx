@@ -7,6 +7,7 @@ const COLUMNS = [
     links: [
       { label: "The Registry", href: "/shop" },
       { label: "Parts by vehicle", href: "/vehicles" },
+      { label: "Most-wanted parts", href: "/requests" },
       { label: "Request a part", href: "/#queue" },
       { label: "Your account", href: "/account" },
     ],
@@ -22,6 +23,7 @@ const COLUMNS = [
   {
     title: "Support",
     links: [
+      { label: "Guides", href: "/guides" },
       { label: "Shipping", href: "/legal/shipping" },
       { label: "Returns & refunds", href: "/legal/returns" },
       { label: "Terms", href: "/legal/terms" },

@@ -15,15 +15,22 @@ export default async function OrderSuccess({
   let email: string | null = null;
   let total: string | null = null;
   let totalPence: number | null = null;
+  let invoiceUrl: string | null = null;
   let processing = false;
   const stripe = getStripe();
   if (stripe && session_id) {
     try {
-      const s = await stripe.checkout.sessions.retrieve(session_id);
+      const s = await stripe.checkout.sessions.retrieve(session_id, {
+        expand: ["invoice"],
+      });
       email = s.customer_details?.email ?? null;
       if (s.amount_total != null) {
         total = formatPrice(s.amount_total);
         totalPence = s.amount_total;
+      }
+      const inv = s.invoice;
+      if (inv && typeof inv === "object" && "hosted_invoice_url" in inv) {
+        invoiceUrl = (inv.hosted_invoice_url as string | null) ?? null;
       }
       // a valid session id that isn't paid (async method / abandoned) must not
       // read as "confirmed"
@@ -69,6 +76,16 @@ export default async function OrderSuccess({
         <Link href="/account" className="label-mono text-brg hover:underline">
           View your orders →
         </Link>
+        {invoiceUrl && (
+          <a
+            href={invoiceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="label-mono text-ink-soft transition-colors hover:text-brg"
+          >
+            Download invoice ↗
+          </a>
+        )}
       </div>
     </main>
   );

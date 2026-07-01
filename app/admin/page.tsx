@@ -51,6 +51,12 @@ export default async function AdminPage() {
               Returns →
             </a>
             <a
+              href="/admin/reviews"
+              className="label-mono border border-hairline px-4 py-3 text-ink-soft transition-colors hover:border-ink hover:text-ink"
+            >
+              Reviews →
+            </a>
+            <a
               href="/admin/donors"
               className="label-mono border border-hairline px-4 py-3 text-ink-soft transition-colors hover:border-ink hover:text-ink"
             >
