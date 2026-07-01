@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
+import { track } from "@vercel/analytics";
 import { formatPrice, type PurchaseOption } from "@/lib/types";
 import { useCart } from "./CartProvider";
 import NotifyMe from "./NotifyMe";
@@ -57,6 +58,11 @@ export default function BuyBox({
       evoNo,
       slots,
       imagePath: heroImage,
+    });
+    track("add_to_cart", {
+      evo: evoNo,
+      option: active?.key ?? "",
+      value: (price * qty) / 100,
     });
     setAdded(true);
     window.setTimeout(() => setAdded(false), 4000);

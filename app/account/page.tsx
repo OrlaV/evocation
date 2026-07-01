@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { formatPrice } from "@/lib/types";
 import { orderNoLabel, royalMailTrackingUrl } from "@/lib/order-emails";
 import SignOutButton from "@/components/admin/SignOutButton";
+import RequestReturn from "@/components/account/RequestReturn";
 
 export const metadata: Metadata = {
   title: "Your garage — Evocation",
@@ -40,7 +41,7 @@ export default async function AccountPage() {
   // scopes both queries to the signed-in user — no service role on a
   // customer-facing page.
   const supabase = await createSupabaseServerClient();
-  const [{ data }, { data: reqData }] = await Promise.all([
+  const [{ data }, { data: reqData }, { data: returnData }] = await Promise.all([
     supabase
       .from("orders")
       .select(
@@ -51,8 +52,14 @@ export default async function AccountPage() {
       .from("queue_requests")
       .select("id, part_label, make, model, kind, notified_at, created_at")
       .order("created_at", { ascending: false }),
+    supabase.from("return_requests").select("order_id, status"),
   ]);
   const orders = (data as OrderRow[]) ?? [];
+  // latest return status per order, to show inline on the order row
+  const returnByOrder = new Map<string, string>();
+  for (const r of (returnData as { order_id: string; status: string }[]) ?? []) {
+    if (!returnByOrder.has(r.order_id)) returnByOrder.set(r.order_id, r.status);
+  }
   // the parts this account has asked for / voted on (exclude anonymous buy-intent)
   const requests = ((reqData as RequestRow[]) ?? []).filter(
     (r) => r.kind !== "order_intent",
@@ -106,7 +113,7 @@ export default async function AccountPage() {
           <table className="w-full min-w-[520px] border-collapse border-t border-hairline">
             <thead>
               <tr>
-                {["Order", "Date", "Parts", "Total", "Status"].map((h) => (
+                {["Order", "Date", "Parts", "Total", "Status", "Guarantee"].map((h) => (
                   <th
                     key={h}
                     className="label-mono border-b border-hairline py-3 pr-3 text-left !text-[0.66rem] !tracking-[0.12em] text-ink-soft"
@@ -150,6 +157,13 @@ export default async function AccountPage() {
                         Track ↗ {o.tracking_number}
                       </a>
                     )}
+                  </td>
+                  <td className="border-b border-hairline py-3.5 align-top">
+                    <RequestReturn
+                      orderId={o.id}
+                      existingStatus={returnByOrder.get(o.id) ?? null}
+                      refunded={o.status === "refunded"}
+                    />
                   </td>
                 </tr>
               ))}

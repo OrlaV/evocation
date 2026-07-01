@@ -490,3 +490,31 @@ export async function resendConfirmationAction(id: string): Promise<OrderActionR
     ? { ok: true, msg: "Confirmation re-sent." }
     : { ok: false, msg: r.reason };
 }
+
+// Update a customer return request (approve / decline / resolve + a note).
+// The actual money-back still goes through the order's Refund button.
+export async function updateReturnAction(input: {
+  id: string;
+  status: string;
+  note?: string;
+}): Promise<OrderActionResult> {
+  await requireAdmin();
+  const status = ["open", "approved", "declined", "resolved"].includes(
+    input.status,
+  )
+    ? input.status
+    : "open";
+  const svc = createServiceClient();
+  const { error } = await svc
+    .from("return_requests")
+    .update({
+      status,
+      admin_note: (input.note ?? "").trim().slice(0, 1000) || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.id);
+  if (error) return { ok: false, msg: error.message };
+  revalidatePath("/admin/returns");
+  revalidatePath("/account");
+  return { ok: true, msg: "Saved." };
+}

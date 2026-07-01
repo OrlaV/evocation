@@ -4,8 +4,9 @@ import { getProductBySlug, getPublishedProducts } from "@/lib/products";
 import { fitmentSpec, optionRefs, refLabels } from "@/lib/types";
 import { imageUrl } from "@/lib/storage";
 import { SITE_URL } from "@/lib/site";
-import { vehicleSlug } from "@/lib/vehicles";
+import { vehicleSlug, vehicleKey } from "@/lib/vehicles";
 import ProductGallery from "@/components/ProductGallery";
+import FitsYourGarage from "@/components/FitsYourGarage";
 import FaqList from "@/components/FaqList";
 import BuyBox from "@/components/BuyBox";
 import Reveal from "@/components/Reveal";
@@ -54,6 +55,14 @@ export default async function ProductPage({
   const primaryRef = refs[0] ?? product.evo_no;
   const labels = refLabels(product);
   const gallery = product.gallery ?? [];
+  // canonical make|model keys for "fits your garage" matching (client-side)
+  const vehicleKeys = Array.from(
+    new Set(
+      product.fitment
+        .map((f) => vehicleKey(f.make, f.model))
+        .filter(Boolean),
+    ),
+  );
   const availability = product.in_stock
     ? "https://schema.org/InStock"
     : "https://schema.org/PreOrder";
@@ -224,6 +233,8 @@ export default async function ProductPage({
                 </div>
               ))}
             </div>
+
+            <FitsYourGarage vehicleKeys={vehicleKeys} />
 
             {/* price + order */}
             <BuyBox

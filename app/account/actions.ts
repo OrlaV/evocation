@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/customer-auth";
 import { createServiceClient } from "@/lib/supabase-server";
 import { ensureStripeCustomer } from "@/lib/stripe-customer";
+import { resolveMake, resolveModel, vehicleKey } from "@/lib/vehicles";
+import { sendEmail, emailConfigured } from "@/lib/email";
+import { SITE_URL } from "@/lib/site";
 
 export type ProfilePayload = {
   full_name?: string;
@@ -62,6 +65,121 @@ export async function saveProfileAction(
   }
 
   revalidatePath("/account/profile");
+  return { ok: true };
+}
+
+/* ---------- My Garage ---------- */
+
+export async function addGarageVehicleAction(input: {
+  make: string;
+  model: string;
+  year?: string;
+  hand?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const user = await requireUser();
+  const make = resolveMake(clean(input.make, 60));
+  const model = resolveModel(make, clean(input.model, 80));
+  if (!make || !model) return { ok: false, error: "Pick a make and model." };
+  const key = vehicleKey(make, model);
+  if (!key) return { ok: false, error: "Couldn't identify that vehicle." };
+  const yearNum = Number(clean(input.year, 4));
+  const year = Number.isFinite(yearNum) && yearNum > 1900 && yearNum < 2100 ? yearNum : null;
+  const hand = input.hand === "LHD" || input.hand === "RHD" ? input.hand : null;
+
+  const svc = createServiceClient();
+  const { error } = await svc.from("garage_vehicles").upsert(
+    { user_id: user.id, make, model, year, hand, vehicle_key: key },
+    { onConflict: "user_id,vehicle_key", ignoreDuplicates: true },
+  );
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/account/profile");
+  return { ok: true };
+}
+
+export async function removeGarageVehicleAction(
+  id: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const user = await requireUser();
+  const svc = createServiceClient();
+  // scope the delete to the owner so an id from another account is a no-op
+  const { error } = await svc
+    .from("garage_vehicles")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/account/profile");
+  return { ok: true };
+}
+
+/* ---------- Returns (self-service "fits or refunded") ---------- */
+
+const RETURN_REASONS = ["doesn't fit", "faulty", "other"];
+
+export async function createReturnAction(input: {
+  orderId: string;
+  reason: string;
+  details?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const user = await requireUser();
+  const reason = RETURN_REASONS.includes(input.reason) ? input.reason : "other";
+  const details = clean(input.details, 1000) || null;
+  const svc = createServiceClient();
+
+  // the order must belong to this account (by user_id or matching email)
+  const { data: order } = await svc
+    .from("orders")
+    .select("id, order_no, user_id, email, status")
+    .eq("id", input.orderId)
+    .maybeSingle();
+  if (!order) return { ok: false, error: "Order not found." };
+  const owns =
+    order.user_id === user.id ||
+    (order.email && user.email && order.email.toLowerCase() === user.email.toLowerCase());
+  if (!owns) return { ok: false, error: "That order isn't on your account." };
+
+  // one open return per order
+  const { data: existing } = await svc
+    .from("return_requests")
+    .select("id")
+    .eq("order_id", order.id)
+    .eq("status", "open")
+    .maybeSingle();
+  if (existing) return { ok: false, error: "A return is already open for this order." };
+
+  const { error } = await svc.from("return_requests").insert({
+    order_id: order.id,
+    user_id: user.id,
+    email: user.email ?? order.email ?? null,
+    reason,
+    details,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  // acknowledge to the customer + alert the shop owner (best-effort, inert
+  // until Resend is configured)
+  if (emailConfigured()) {
+    const orderNo = order.order_no ? `O-${String(order.order_no).padStart(4, "0")}` : "your order";
+    if (user.email) {
+      await sendEmail({
+        to: user.email,
+        subject: `Evocation — return request received (${orderNo})`,
+        html: `<p>We've received your return request for ${orderNo} (${reason}). We'll reply with the next steps shortly — fits or refunded.</p>`,
+        text: `We've received your return request for ${orderNo} (${reason}). We'll reply shortly. — Evocation`,
+      });
+    }
+    const admins = (process.env.ADMIN_EMAILS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    for (const to of admins) {
+      await sendEmail({
+        to,
+        subject: `Return requested — ${orderNo} (${reason})`,
+        html: `<p>${user.email ?? order.email} requested a return for ${orderNo}.<br>Reason: ${reason}<br>${details ?? ""}</p><p><a href="${SITE_URL}/admin/returns">Open returns →</a></p>`,
+        text: `${user.email ?? order.email} requested a return for ${orderNo} (${reason}).\n${details ?? ""}\n${SITE_URL}/admin/returns`,
+      });
+    }
+  }
+
+  revalidatePath("/account");
   return { ok: true };
 }
 

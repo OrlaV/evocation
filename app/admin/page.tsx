@@ -45,6 +45,12 @@ export default async function AdminPage() {
               Queue requests →
             </a>
             <a
+              href="/admin/returns"
+              className="label-mono border border-hairline px-4 py-3 text-ink-soft transition-colors hover:border-ink hover:text-ink"
+            >
+              Returns →
+            </a>
+            <a
               href="/admin/donors"
               className="label-mono border border-hairline px-4 py-3 text-ink-soft transition-colors hover:border-ink hover:text-ink"
             >

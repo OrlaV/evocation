@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { requireUser } from "@/lib/customer-auth";
 import { createServiceClient } from "@/lib/supabase-server";
 import ProfileForm, { type ProfileInitial } from "@/components/account/ProfileForm";
+import GarageManager, {
+  type GarageVehicle,
+} from "@/components/account/GarageManager";
 
 export const metadata: Metadata = {
   title: "Profile — Evocation",
@@ -13,11 +16,15 @@ const str = (v: unknown) => (typeof v === "string" ? v : "");
 export default async function ProfilePage() {
   const user = await requireUser();
   const supabase = createServiceClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const [{ data }, { data: garageRows }] = await Promise.all([
+    supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
+    supabase
+      .from("garage_vehicles")
+      .select("id, make, model, year, hand")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true }),
+  ]);
+  const garage = (garageRows as GarageVehicle[]) ?? [];
 
   const initial: ProfileInitial = {
     full_name: str(data?.full_name),
@@ -45,6 +52,9 @@ export default async function ProfilePage() {
             Your garage
           </div>
           <h1 className="font-display mt-1 text-[1.8rem] font-bold">Profile</h1>
+        </div>
+        <div className="mt-8">
+          <GarageManager initial={garage} />
         </div>
         <ProfileForm initial={initial} email={user.email ?? ""} />
       </div>

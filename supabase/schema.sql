@@ -199,6 +199,39 @@ create table if not exists public.newsletter_signups (
 );
 alter table public.newsletter_signups enable row level security;
 
+-- ---------- garage (voir migration 014) ----------
+create table if not exists public.garage_vehicles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  make text not null,
+  model text not null,
+  year int,
+  hand text,
+  vehicle_key text not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, vehicle_key)
+);
+create index if not exists idx_garage_user on public.garage_vehicles (user_id);
+alter table public.garage_vehicles enable row level security;
+
+-- ---------- return_requests (voir migration 015) ----------
+create table if not exists public.return_requests (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.orders(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete set null,
+  email text,
+  reason text not null,
+  details text,
+  status text not null default 'open'
+    check (status in ('open', 'approved', 'declined', 'resolved')),
+  admin_note text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_returns_order on public.return_requests (order_id);
+alter table public.return_requests enable row level security;
+-- (policies for garage/returns live in migrations 014/015)
+
 -- ---------- storage : images produits ----------
 insert into storage.buckets (id, name, public)
 values ('product-images', 'product-images', true)

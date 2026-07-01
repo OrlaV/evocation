@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
-import { formatPrice } from "@/lib/types";
+import { track } from "@vercel/analytics";
+import { formatPrice, type Product } from "@/lib/types";
 import { imageUrl } from "@/lib/storage";
 import {
   shippingPenceForCart,
@@ -12,14 +13,37 @@ import {
   type ShippingSettings,
 } from "@/lib/shipping";
 import { useCart } from "./CartProvider";
+import { PartCard } from "./Registry";
 
 const EASE = [0.21, 0.47, 0.32, 0.98] as const;
 
-export default function CartView({ shipping }: { shipping: ShippingSettings }) {
+export default function CartView({
+  shipping,
+  allProducts = [],
+}: {
+  shipping: ShippingSettings;
+  allProducts?: Product[];
+}) {
   const { items, setQty, remove, subtotalPence, mounted } = useCart();
   const [zone, setZone] = useState<ShipZone>("uk");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // cross-sell: other published parts that fit the same make(s) as the cart
+  const suggestions = useMemo(() => {
+    if (!allProducts.length || !items.length) return [];
+    const inCart = new Set(items.map((i) => i.slug));
+    const makes = new Set<string>();
+    for (const i of items) {
+      const p = allProducts.find((pr) => pr.slug === i.slug);
+      p?.fitment.forEach((f) => f.make && makes.add(f.make));
+    }
+    return allProducts
+      .filter(
+        (p) => !inCart.has(p.slug) && p.fitment.some((f) => makes.has(f.make)),
+      )
+      .slice(0, 3);
+  }, [allProducts, items]);
 
   if (!mounted) return <div className="min-h-[40vh]" />;
 
@@ -50,6 +74,7 @@ export default function CartView({ shipping }: { shipping: ShippingSettings }) {
   const checkout = async () => {
     setBusy(true);
     setErr(null);
+    track("begin_checkout", { value: total / 100, items: items.length });
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -75,6 +100,7 @@ export default function CartView({ shipping }: { shipping: ShippingSettings }) {
   };
 
   return (
+    <>
     <div className="grid grid-cols-1 gap-[clamp(28px,5vw,64px)] min-[861px]:grid-cols-[1.6fr_1fr]">
       {/* line items */}
       <div className="border-t border-hairline">
@@ -252,5 +278,20 @@ export default function CartView({ shipping }: { shipping: ShippingSettings }) {
         </div>
       </motion.div>
     </div>
+
+    {/* cross-sell — other parts that fit the same car(s) */}
+    {suggestions.length > 0 && (
+      <div className="mt-[clamp(40px,6vw,72px)]">
+        <div className="label-mono mb-6 flex items-center gap-3.5 text-ink-soft after:h-px after:flex-1 after:bg-hairline after:content-['']">
+          You may also need
+        </div>
+        <div className="grid grid-cols-2 gap-[clamp(8px,1.4vw,18px)] min-[861px]:grid-cols-3">
+          {suggestions.map((p, i) => (
+            <PartCard key={p.evo_no} part={p} index={i} compact />
+          ))}
+        </div>
+      </div>
+    )}
+    </>
   );
 }

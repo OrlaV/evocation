@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Product } from "@/lib/types";
 import { normalizeRef, optionRefs } from "@/lib/types";
+import { vehicleKey } from "@/lib/vehicles";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { PartCard } from "./Registry";
 
 const SORTS = [
@@ -51,6 +53,28 @@ export default function ShopGrid({
   const [make, setMake] = useState<string>(initial.make ?? "");
   const [model, setModel] = useState<string>(initial.model ?? "");
   const [hand, setHand] = useState<string>(initial.hand ?? "");
+  // the signed-in customer's garage vehicle keys, for the "fits my car" filter
+  const [garageKeys, setGarageKeys] = useState<string[]>([]);
+  const [onlyGarage, setOnlyGarage] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createSupabaseBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data } = await supabase
+        .from("garage_vehicles")
+        .select("vehicle_key");
+      if (cancelled || !data) return;
+      setGarageKeys(data.map((v) => v.vehicle_key as string));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // makes present in the catalogue, for the filter
   const makes = useMemo(() => {
@@ -97,11 +121,14 @@ export default function ShopGrid({
   }, [query, make, model, hand, sort]);
 
   const visible = useMemo(() => {
+    const garageSet = new Set(garageKeys);
     const list = products.filter(
       (p) =>
         (!make || p.fitment.some((f) => f.make === make)) &&
         (!model || p.fitment.some((f) => f.model === model)) &&
         (!hand || p.fitment.some((f) => f.hand === hand)) &&
+        (!onlyGarage ||
+          p.fitment.some((f) => garageSet.has(vehicleKey(f.make, f.model)))) &&
         matches(p, query),
     );
     const byDate = (a: Product, b: Product) =>
@@ -119,7 +146,7 @@ export default function ShopGrid({
       case "evo":
         return list.sort((a, b) => a.evo_no.localeCompare(b.evo_no));
     }
-  }, [products, sort, query, make, model, hand]);
+  }, [products, sort, query, make, model, hand, onlyGarage, garageKeys]);
 
   const chip = (active: boolean) =>
     `label-mono cursor-pointer border px-2.5 py-1 !text-[0.64rem] transition-colors ${
@@ -151,6 +178,22 @@ export default function ShopGrid({
           </button>
         )}
       </div>
+
+      {/* "fits my garage" — only when the customer has saved cars */}
+      {garageKeys.length > 0 && (
+        <div className="mb-3">
+          <button
+            onClick={() => setOnlyGarage((v) => !v)}
+            className={`label-mono cursor-pointer border px-3 py-1.5 !text-[0.64rem] transition-colors ${
+              onlyGarage
+                ? "border-brg bg-brg text-cream"
+                : "border-brg text-brg hover:bg-brg/10"
+            }`}
+          >
+            {onlyGarage ? "✓ " : ""}Fits my garage
+          </button>
+        </div>
+      )}
 
       {/* make filter */}
       {makes.length > 1 && (
