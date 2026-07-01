@@ -253,7 +253,18 @@ create table if not exists public.reviews (
 );
 create index if not exists idx_reviews_product on public.reviews (product_id, status);
 alter table public.reviews enable row level security;
--- (policies for garage/returns/reviews live in migrations 014/015/016)
+
+-- ---------- wishlist (voir migration 018) ----------
+create table if not exists public.wishlist_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  product_id uuid not null references public.products(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (user_id, product_id)
+);
+create index if not exists idx_wishlist_user on public.wishlist_items (user_id);
+alter table public.wishlist_items enable row level security;
+-- (policies for garage/returns/reviews/wishlist live in migrations 014/015/016/018)
 
 -- ---------- storage : images produits ----------
 insert into storage.buckets (id, name, public)

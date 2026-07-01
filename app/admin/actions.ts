@@ -183,36 +183,73 @@ export async function notifyWaitingAction(productId: string) {
     };
   }
 
+  // 1) queue requesters for a matching make+model, not yet notified
   const { data: waiting } = await supabase
     .from("queue_requests")
     .select("id, email, make, model")
     .in("vehicle_key", keys)
     .is("notified_at", null);
-
   const list = (waiting ?? []) as {
     id: string;
     email: string;
     make: string | null;
     model: string | null;
   }[];
-  if (list.length === 0) {
-    return { ok: true as const, sent: 0, total: 0 };
+  const queueEmails = new Set(list.map((r) => r.email.toLowerCase()));
+
+  // 2) garage owners whose saved car matches — but only those opted in to
+  //    marketing, and not already covered by the queue list.
+  const garageRecipients: { make: string | null; model: string | null; email: string }[] = [];
+  const { data: garageRows } = await supabase
+    .from("garage_vehicles")
+    .select("user_id, make, model")
+    .in("vehicle_key", keys);
+  const garageUserIds = [...new Set((garageRows ?? []).map((g) => g.user_id as string))];
+  if (garageUserIds.length) {
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("user_id, marketing_opt_in")
+      .in("user_id", garageUserIds);
+    const optedIn = new Set(
+      (profs ?? []).filter((p) => p.marketing_opt_in).map((p) => p.user_id as string),
+    );
+    if (optedIn.size) {
+      const { data: usersData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      const emailById = new Map(
+        (usersData?.users ?? []).map((u) => [u.id, u.email ?? null]),
+      );
+      const seen = new Set<string>();
+      for (const g of garageRows ?? []) {
+        const uid = g.user_id as string;
+        if (!optedIn.has(uid) || seen.has(uid)) continue;
+        seen.add(uid);
+        const email = emailById.get(uid);
+        if (email && !queueEmails.has(email.toLowerCase())) {
+          garageRecipients.push({ make: g.make, model: g.model, email });
+        }
+      }
+    }
   }
 
+  const total = list.length + garageRecipients.length;
+  if (total === 0) {
+    return { ok: true as const, sent: 0, total: 0, garageSent: 0 };
+  }
   if (!emailConfigured()) {
     return {
       ok: false as const,
-      error: `Resend isn't set up yet — ${list.length} ${
-        list.length === 1 ? "person is" : "people are"
-      } waiting. Add RESEND_API_KEY + RESEND_FROM and verify the domain to send.`,
+      error: `Resend isn't set up yet — ${total} ${
+        total === 1 ? "person is" : "people are"
+      } waiting (queue + garage). Add RESEND_FROM and verify the domain to send.`,
     };
   }
 
+  const subject = `${product.name} is back in the registry`;
   const sentIds: string[] = [];
   for (const r of list) {
     const res = await sendEmail({
       to: r.email,
-      subject: `${product.name} is back in the registry`,
+      subject,
       html: notifyHtml(product.name, product.slug, r.make, r.model),
     });
     if (res.ok) sentIds.push(r.id);
@@ -223,8 +260,19 @@ export async function notifyWaitingAction(productId: string) {
       .update({ notified_at: new Date().toISOString() })
       .in("id", sentIds);
   }
+
+  let garageSent = 0;
+  for (const g of garageRecipients) {
+    const res = await sendEmail({
+      to: g.email,
+      subject,
+      html: notifyHtml(product.name, product.slug, g.make, g.model),
+    });
+    if (res.ok) garageSent++;
+  }
+
   revalidatePath(`/admin/parts/${productId}`);
-  return { ok: true as const, sent: sentIds.length, total: list.length };
+  return { ok: true as const, sent: sentIds.length, total: list.length, garageSent };
 }
 
 function notifyHtml(

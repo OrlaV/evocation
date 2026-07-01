@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { CartProvider } from "@/components/CartProvider";
+import { CurrencyProvider } from "@/components/CurrencyProvider";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -108,15 +109,17 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        <CartProvider>
-          <Header />
-          {/* `contents` keeps this wrapper layout-neutral so page <main>
-              elements stay direct flex children (footer still pushes down). */}
-          <div id="main-content" className="contents">
-            {children}
-          </div>
-          <Footer />
-        </CartProvider>
+        <CurrencyProvider>
+          <CartProvider>
+            <Header />
+            {/* `contents` keeps this wrapper layout-neutral so page <main>
+                elements stay direct flex children (footer still pushes down). */}
+            <div id="main-content" className="contents">
+              {children}
+            </div>
+            <Footer />
+          </CartProvider>
+        </CurrencyProvider>
         <Analytics />
       </body>
     </html>

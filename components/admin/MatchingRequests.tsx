@@ -33,11 +33,10 @@ export default function MatchingRequests({
       setMsg(res.error);
       return;
     }
-    setMsg(
-      res.sent === 0
-        ? "No one waiting right now."
-        : `Sent ${res.sent} of ${res.total} notification${res.total > 1 ? "s" : ""}.`,
-    );
+    const parts: string[] = [];
+    if (res.total) parts.push(`${res.sent}/${res.total} from the queue`);
+    if (res.garageSent) parts.push(`${res.garageSent} garage owner${res.garageSent > 1 ? "s" : ""}`);
+    setMsg(parts.length ? `Notified ${parts.join(" + ")}.` : "No one waiting right now.");
     router.refresh();
   };
 
@@ -47,45 +46,39 @@ export default function MatchingRequests({
         Waiting in the queue — {requests.length}
       </div>
 
-      {requests.length === 0 ? (
-        <p className="max-w-[60ch] font-mono text-[0.72rem] leading-[1.5] text-ink-soft/75">
-          No one is waiting for these models yet. When someone requests a part
-          for a matching make + model, they appear here and you can notify them
-          in one click.
+      {requests.length > 0 && (
+        <ul className="mb-4 flex flex-col">
+          {requests.map((r) => (
+            <li
+              key={r.id}
+              className="flex items-baseline justify-between gap-3 border-b border-hairline/60 py-1.5 font-mono text-[0.76rem]"
+            >
+              <span className="text-ink">{r.email}</span>
+              <span className="text-ink-soft/80">
+                {[r.make, r.model].filter(Boolean).join(" ")}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mb-3 max-w-[60ch] font-mono text-[0.72rem] leading-[1.5] text-ink-soft/75">
+        Emails everyone waiting for a matching make + model — queue requesters
+        {" "}plus garage owners who opted in — and marks the queue rows notified.
+      </p>
+      <button
+        type="button"
+        onClick={notify}
+        disabled={busy}
+        className="label-mono chamfer cursor-pointer bg-brg px-5 py-3 font-bold text-cream transition-colors hover:bg-brg-deep disabled:opacity-60"
+      >
+        {busy ? "Notifying…" : "Notify interested owners"}
+      </button>
+      {!configured && (
+        <p className="mt-2.5 max-w-[60ch] font-mono text-[0.68rem] leading-[1.5] text-brass">
+          Resend isn&apos;t set up yet — pressing the button tells you what&apos;s
+          missing; nothing is sent until RESEND_API_KEY + RESEND_FROM are set and
+          the domain is verified.
         </p>
-      ) : (
-        <>
-          <ul className="mb-4 flex flex-col">
-            {requests.map((r) => (
-              <li
-                key={r.id}
-                className="flex items-baseline justify-between gap-3 border-b border-hairline/60 py-1.5 font-mono text-[0.76rem]"
-              >
-                <span className="text-ink">{r.email}</span>
-                <span className="text-ink-soft/80">
-                  {[r.make, r.model].filter(Boolean).join(" ")}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={notify}
-            disabled={busy}
-            className="label-mono chamfer cursor-pointer bg-brg px-5 py-3 font-bold text-cream transition-colors hover:bg-brg-deep disabled:opacity-60"
-          >
-            {busy
-              ? "Notifying…"
-              : `Notify ${requests.length} ${requests.length === 1 ? "person" : "people"}`}
-          </button>
-          {!configured && (
-            <p className="mt-2.5 max-w-[60ch] font-mono text-[0.68rem] leading-[1.5] text-brass">
-              Resend isn&apos;t set up yet — pressing the button tells you what&apos;s
-              missing; nothing is sent until RESEND_API_KEY + RESEND_FROM are set
-              and the domain is verified.
-            </p>
-          )}
-        </>
       )}
 
       {msg && <p className="mt-2.5 font-mono text-[0.72rem] text-brg">{msg}</p>}

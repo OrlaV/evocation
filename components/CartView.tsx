@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { track } from "@vercel/analytics";
 import { formatPrice, type Product } from "@/lib/types";
+import { approxPrice } from "@/lib/currency";
 import { imageUrl } from "@/lib/storage";
 import {
   shippingPenceForCart,
@@ -13,6 +14,7 @@ import {
   type ShippingSettings,
 } from "@/lib/shipping";
 import { useCart } from "./CartProvider";
+import { useCurrency } from "./CurrencyProvider";
 import { PartCard } from "./Registry";
 
 const EASE = [0.21, 0.47, 0.32, 0.98] as const;
@@ -25,6 +27,7 @@ export default function CartView({
   allProducts?: Product[];
 }) {
   const { items, setQty, remove, subtotalPence, mounted } = useCart();
+  const { code } = useCurrency();
   const [zone, setZone] = useState<ShipZone>("uk");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -248,6 +251,7 @@ export default function CartView({
         </div>
         <div className="label-mono mt-1 !text-[0.62rem] text-ink-soft/70">
           VAT included · region confirmed at checkout
+          {code !== "GBP" && <> · ≈ {approxPrice(total, code)} {code}</>}
         </div>
 
         <motion.button

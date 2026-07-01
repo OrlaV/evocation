@@ -5,7 +5,9 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { track } from "@vercel/analytics";
 import { formatPrice, type PurchaseOption } from "@/lib/types";
+import { approxPrice } from "@/lib/currency";
 import { useCart } from "./CartProvider";
+import { useCurrency } from "./CurrencyProvider";
 import NotifyMe from "./NotifyMe";
 
 /* Buy box — picks a purchase option (left / right / pair / set) and quantity,
@@ -39,6 +41,7 @@ export default function BuyBox({
   checkoutEnabled: boolean;
 }) {
   const { add } = useCart();
+  const { code, mounted } = useCurrency();
   const hasOptions = options.length > 0;
   const [sel, setSel] = useState(0);
   const [qty, setQty] = useState(1);
@@ -122,12 +125,22 @@ export default function BuyBox({
         <span className="font-num text-[2.6rem] leading-none">
           {formatPrice(price)}
         </span>
+        {mounted && code !== "GBP" && (
+          <span className="label-mono !text-[0.66rem] text-ink-soft">
+            ≈ {approxPrice(price, code)}
+          </span>
+        )}
         {usedPriceNote && (
           <span className="text-[0.88rem] text-ink-soft">
             Used originals fetch {usedPriceNote} — worn.
           </span>
         )}
       </div>
+      {mounted && code !== "GBP" && (
+        <div className="label-mono mt-1 !text-[0.6rem] text-ink-soft/70">
+          Charged in GBP · {code} shown as an approximate guide
+        </div>
+      )}
 
       {included && (
         <div className="mt-2 font-mono text-[0.76rem] tracking-[0.04em] text-ink-soft">

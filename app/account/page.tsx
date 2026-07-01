@@ -41,19 +41,37 @@ export default async function AccountPage() {
   // scopes both queries to the signed-in user — no service role on a
   // customer-facing page.
   const supabase = await createSupabaseServerClient();
-  const [{ data }, { data: reqData }, { data: returnData }] = await Promise.all([
-    supabase
-      .from("orders")
-      .select(
-        "id, order_no, amount_pence, items, status, tracking_number, created_at",
-      )
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("queue_requests")
-      .select("id, part_label, make, model, kind, notified_at, created_at")
-      .order("created_at", { ascending: false }),
-    supabase.from("return_requests").select("order_id, status"),
-  ]);
+  const [{ data }, { data: reqData }, { data: returnData }, { data: wishData }] =
+    await Promise.all([
+      supabase
+        .from("orders")
+        .select(
+          "id, order_no, amount_pence, items, status, tracking_number, created_at",
+        )
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("queue_requests")
+        .select("id, part_label, make, model, kind, notified_at, created_at")
+        .order("created_at", { ascending: false }),
+      supabase.from("return_requests").select("order_id, status"),
+      supabase
+        .from("wishlist_items")
+        .select("product_id, products(evo_no, slug, name, price_pence)")
+        .order("created_at", { ascending: false }),
+    ]);
+  type WishProduct = {
+    evo_no: string;
+    slug: string;
+    name: string;
+    price_pence: number;
+  };
+  type WishRow = {
+    product_id: string;
+    products: WishProduct | WishProduct[] | null;
+  };
+  const wishlist = ((wishData as unknown as WishRow[]) ?? [])
+    .map((w) => (Array.isArray(w.products) ? w.products[0] : w.products))
+    .filter((p): p is WishProduct => Boolean(p));
   const orders = (data as OrderRow[]) ?? [];
   // latest return status per order, to show inline on the order row
   const returnByOrder = new Map<string, string>();
@@ -127,7 +145,12 @@ export default async function AccountPage() {
               {orders.map((o) => (
                 <tr key={o.id}>
                   <td className="border-b border-hairline py-3.5 pr-3 font-mono text-[0.78rem] font-semibold">
-                    {orderNoLabel(o.order_no)}
+                    <a
+                      href={`/account/orders/${o.id}`}
+                      className="transition-colors hover:text-brg"
+                    >
+                      {orderNoLabel(o.order_no)}
+                    </a>
                   </td>
                   <td className="border-b border-hairline py-3.5 pr-3 font-mono text-[0.78rem] text-ink-soft">
                     {new Date(o.created_at).toLocaleDateString("en-GB")}
@@ -216,6 +239,40 @@ export default async function AccountPage() {
                   }`}
                 >
                   {r.notified_at ? "Revived — notified" : "In the queue"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* saved parts (wishlist) */}
+        <div className="label-mono mt-14 mb-4 flex items-center gap-3.5 text-ink-soft after:h-px after:flex-1 after:bg-hairline after:content-['']">
+          Saved for later
+        </div>
+        {wishlist.length === 0 ? (
+          <div className="border border-dashed border-ink-soft/65 px-6 py-8 text-center text-ink-soft">
+            Nothing saved yet. Tap{" "}
+            <span className="text-brg">♡ Save for later</span> on a part to keep
+            it here.
+          </div>
+        ) : (
+          <ul className="border-t border-hairline">
+            {wishlist.map((p) => (
+              <li
+                key={p.slug}
+                className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline py-3.5"
+              >
+                <a
+                  href={`/parts/${p.slug}`}
+                  className="text-[0.98rem] transition-colors hover:text-brg"
+                >
+                  {p.name}
+                  <span className="label-mono ml-2 !text-[0.6rem] text-brass">
+                    {p.evo_no}
+                  </span>
+                </a>
+                <span className="font-num text-[1.05rem]">
+                  {formatPrice(p.price_pence)}
                 </span>
               </li>
             ))}

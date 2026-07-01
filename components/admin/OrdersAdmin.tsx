@@ -42,12 +42,14 @@ function shippingAddress(shipping: unknown): {
   name: string | null;
   phone: string | null;
   lines: string[];
+  gift: string | null;
 } {
   if (!shipping || typeof shipping !== "object")
-    return { name: null, phone: null, lines: [] };
+    return { name: null, phone: null, lines: [], gift: null };
   const s = shipping as {
     name?: string | null;
     phone?: string | null;
+    gift_message?: string | null;
     address?: Addr;
   } & Addr;
   const a: Addr = s.address ?? s;
@@ -58,7 +60,12 @@ function shippingAddress(shipping: unknown): {
     a.state,
     a.country,
   ].filter((x): x is string => Boolean(x && x.trim()));
-  return { name: s.name ?? null, phone: s.phone ?? null, lines };
+  return {
+    name: s.name ?? null,
+    phone: s.phone ?? null,
+    lines,
+    gift: s.gift_message ?? null,
+  };
 }
 
 const statusStyle: Record<string, string> = {
@@ -76,7 +83,7 @@ function OrderCard({ order }: { order: AdminOrder }) {
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [pending, start] = useTransition();
 
-  const { name, phone, lines } = shippingAddress(order.shipping);
+  const { name, phone, lines, gift } = shippingAddress(order.shipping);
   const items = (order.items ?? [])
     .map((i) => `${i.qty ?? 1}× ${i.name ?? "Part"}`)
     .join(", ");
@@ -165,6 +172,12 @@ function OrderCard({ order }: { order: AdminOrder }) {
           {phone && (
             <div className="mt-1 font-mono text-[0.8rem] text-ink-soft">
               ☎ {phone}
+            </div>
+          )}
+          {gift && (
+            <div className="mt-2 border-l-2 border-brg pl-2 text-[0.82rem] text-ink">
+              <span className="label-mono !text-[0.56rem] text-brg">Gift</span>{" "}
+              {gift}
             </div>
           )}
         </div>

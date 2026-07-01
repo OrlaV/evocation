@@ -190,6 +190,16 @@ export async function POST(req: Request) {
       phone_number_collection: { enabled: true },
       billing_address_collection: "auto",
       allow_promotion_codes: true,
+      // optional gift message — a niche NLA part is a natural gift between
+      // enthusiasts. Captured by the webhook into the order.
+      custom_fields: [
+        {
+          key: "gift_message",
+          label: { type: "custom", custom: "Gift message (optional)" },
+          type: "text",
+          optional: true,
+        },
+      ],
       // issue a proper (VAT) invoice for every order — trade/garage buyers ask
       // for it, and it doubles as the customer's receipt.
       invoice_creation: {

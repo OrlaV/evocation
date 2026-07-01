@@ -11,6 +11,8 @@ import {
 } from "motion/react";
 import LogoWordmark from "./LogoWordmark";
 import { useCart } from "./CartProvider";
+import { useCurrency } from "./CurrencyProvider";
+import { CURRENCY_CODES } from "@/lib/currency";
 
 const NAV = [
   { label: "The Registry", href: "/shop" },
@@ -23,6 +25,7 @@ const NAV = [
 export default function Header() {
   const pathname = usePathname();
   const { count, mounted } = useCart();
+  const { code, setCode } = useCurrency();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -88,6 +91,18 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-3">
+          <select
+            value={code}
+            onChange={(e) => setCode(e.target.value as typeof code)}
+            aria-label="Display currency"
+            className="label-mono cursor-pointer bg-transparent py-2 text-ink-soft outline-none transition-colors hover:text-brg"
+          >
+            {CURRENCY_CODES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
           <a
             href="/account"
             className="label-mono px-1 py-2 text-ink-soft transition-colors hover:text-brg"

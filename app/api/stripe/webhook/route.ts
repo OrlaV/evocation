@@ -119,9 +119,17 @@ export async function POST(req: Request) {
       // fold the phone into the shipping blob (no extra column) so the admin
       // has it for the Royal Mail label.
       const phone = session.customer_details?.phone ?? null;
+      // optional gift message from the Checkout custom field
+      const giftMessage =
+        session.custom_fields?.find((f) => f.key === "gift_message")?.text
+          ?.value || null;
       const shipping =
-        baseShipping || phone
-          ? { ...(baseShipping as object | null), ...(phone ? { phone } : {}) }
+        baseShipping || phone || giftMessage
+          ? {
+              ...(baseShipping as object | null),
+              ...(phone ? { phone } : {}),
+              ...(giftMessage ? { gift_message: giftMessage } : {}),
+            }
           : null;
 
       const email =

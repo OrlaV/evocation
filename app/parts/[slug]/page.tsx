@@ -7,6 +7,7 @@ import { SITE_URL } from "@/lib/site";
 import { vehicleSlug, vehicleKey } from "@/lib/vehicles";
 import ProductGallery from "@/components/ProductGallery";
 import FitsYourGarage from "@/components/FitsYourGarage";
+import WishlistButton from "@/components/WishlistButton";
 import ReviewForm from "@/components/ReviewForm";
 import { getProductReviews } from "@/lib/reviews";
 import FaqList from "@/components/FaqList";
@@ -262,6 +263,10 @@ export default async function ProductPage({
             </div>
 
             <FitsYourGarage vehicleKeys={vehicleKeys} />
+
+            <div className="mt-4">
+              <WishlistButton productId={product.id} slug={product.slug} />
+            </div>
 
             {/* price + order */}
             <BuyBox
