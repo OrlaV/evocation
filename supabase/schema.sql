@@ -195,8 +195,13 @@ create table if not exists public.newsletter_signups (
   email text not null unique,
   source text,
   user_id uuid references auth.users(id) on delete set null,
+  status text not null default 'pending'
+    check (status in ('pending', 'confirmed', 'unsubscribed')),  -- double opt-in (016/017)
+  token uuid not null default gen_random_uuid(),
+  confirmed_at timestamptz,
   created_at timestamptz not null default now()
 );
+create index if not exists idx_newsletter_token on public.newsletter_signups (token);
 alter table public.newsletter_signups enable row level security;
 
 -- ---------- garage (voir migration 014) ----------

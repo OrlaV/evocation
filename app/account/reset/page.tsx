@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { passwordError, PASSWORD_HINT, PASSWORD_MIN } from "@/lib/password";
 
 /* Reached from the password-recovery email (via /auth/callback, which sets a
    recovery session). The user sets a new password here. */
@@ -16,6 +17,11 @@ export default function ResetPasswordPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const weak = passwordError(password);
+    if (weak) {
+      setError(weak);
+      return;
+    }
     if (password !== confirm) {
       setError("Passwords don't match.");
       return;
@@ -50,16 +56,16 @@ export default function ResetPasswordPage() {
             <input
               type="password"
               required
-              minLength={8}
+              minLength={PASSWORD_MIN}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="new password (min. 8 chars)"
+              placeholder={`new password — ${PASSWORD_HINT.toLowerCase()}`}
               className="border border-hairline bg-transparent px-4 py-3 font-mono text-[0.82rem] tracking-[0.06em] text-ink outline-none transition-colors placeholder:text-ink-soft/65 focus:border-ink"
             />
             <input
               type="password"
               required
-              minLength={8}
+              minLength={PASSWORD_MIN}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="confirm new password"

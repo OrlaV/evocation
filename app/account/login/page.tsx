@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { passwordError, PASSWORD_HINT, PASSWORD_MIN } from "@/lib/password";
 
 type Mode = "signin" | "signup" | "forgot";
 
@@ -54,8 +55,14 @@ export default function AccountLoginPage() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setBusy(false);
       if (error) {
-        if (/confirm/i.test(error.message)) setNeedsConfirm(true);
-        return setError(error.message);
+        // an unconfirmed account is the one case we must surface (to offer a
+        // resend); every other failure stays generic so we don't reveal
+        // whether an account exists.
+        if (/confirm/i.test(error.message)) {
+          setNeedsConfirm(true);
+          return setError("Please confirm your email first — we can resend it.");
+        }
+        return setError("Wrong email or password.");
       }
       router.push("/account");
       router.refresh();
@@ -63,6 +70,11 @@ export default function AccountLoginPage() {
     }
 
     // signup
+    const weak = passwordError(password);
+    if (weak) {
+      setBusy(false);
+      return setError(weak);
+    }
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -130,10 +142,10 @@ export default function AccountLoginPage() {
                 <input
                   type={showPassword ? "text" : "password"}
                   required
-                  minLength={8}
+                  minLength={mode === "signup" ? PASSWORD_MIN : undefined}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={mode === "signup" ? "password (min. 8 chars)" : "password"}
+                  placeholder={mode === "signup" ? `password — ${PASSWORD_HINT.toLowerCase()}` : "password"}
                   className="min-w-0 flex-1 bg-transparent px-4 py-3 font-mono text-[0.82rem] tracking-[0.06em] text-ink outline-none placeholder:text-ink-soft/65"
                 />
                 <button

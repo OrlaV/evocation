@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { saveProfileAction, deleteAccountAction } from "@/app/account/actions";
+import { passwordError, PASSWORD_MIN, PASSWORD_HINT } from "@/lib/password";
 
 export type ProfileInitial = {
   full_name: string;
@@ -87,6 +88,7 @@ export default function ProfileForm({
   };
 
   /* --- password --- */
+  const [curPw, setCurPw] = useState("");
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
   const [pwMsg, setPwMsg] = useState<{ text: string; ok: boolean } | null>(null);
@@ -94,20 +96,37 @@ export default function ProfileForm({
   const changePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPwMsg(null);
+    const weak = passwordError(pw);
+    if (weak) return setPwMsg({ text: weak, ok: false });
     if (pw !== pw2) return setPwMsg({ text: "Passwords don't match.", ok: false });
     setPwBusy(true);
     const supabase = createSupabaseBrowserClient();
+    // re-authenticate with the current password before a sensitive change
+    const { error: reauth } = await supabase.auth.signInWithPassword({
+      email,
+      password: curPw,
+    });
+    if (reauth) {
+      setPwBusy(false);
+      return setPwMsg({ text: "Current password is incorrect.", ok: false });
+    }
     const { error } = await supabase.auth.updateUser({ password: pw });
     setPwBusy(false);
     if (error) return setPwMsg({ text: error.message, ok: false });
+    setCurPw("");
     setPw("");
     setPw2("");
     setPwMsg({ text: "Password updated.", ok: true });
   };
 
   /* --- delete --- */
+  const [delPw, setDelPw] = useState("");
   const [delBusy, setDelBusy] = useState(false);
   const deleteAccount = async () => {
+    if (!delPw) {
+      alert("Enter your password to confirm deletion.");
+      return;
+    }
     if (
       !window.confirm(
         "Delete your account permanently? Your order history is kept for our records but unlinked from you. This can't be undone.",
@@ -115,6 +134,17 @@ export default function ProfileForm({
     )
       return;
     setDelBusy(true);
+    // re-authenticate before an irreversible action
+    const supabaseAuth = createSupabaseBrowserClient();
+    const { error: reauth } = await supabaseAuth.auth.signInWithPassword({
+      email,
+      password: delPw,
+    });
+    if (reauth) {
+      setDelBusy(false);
+      alert("Password is incorrect.");
+      return;
+    }
     const r = await deleteAccountAction();
     if (!r.ok) {
       setDelBusy(false);
@@ -238,13 +268,23 @@ export default function ProfileForm({
       <form onSubmit={changePassword} className="border-t border-hairline pt-10">
         <h2 className="font-display text-[1.15rem] font-bold">Password</h2>
         <p className="mt-1 mb-5 text-[0.9rem] text-ink-soft">
-          Signed in as {email}.
+          Signed in as {email}. {PASSWORD_HINT}
         </p>
+        <input
+          type="password"
+          required
+          autoComplete="current-password"
+          value={curPw}
+          onChange={(e) => setCurPw(e.target.value)}
+          placeholder="current password"
+          className={`${field} mb-3 max-w-[460px]`}
+        />
         <div className="grid max-w-[460px] grid-cols-1 gap-3 min-[440px]:grid-cols-2">
           <input
             type="password"
-            minLength={8}
+            minLength={PASSWORD_MIN}
             required
+            autoComplete="new-password"
             value={pw}
             onChange={(e) => setPw(e.target.value)}
             placeholder="new password"
@@ -252,8 +292,9 @@ export default function ProfileForm({
           />
           <input
             type="password"
-            minLength={8}
+            minLength={PASSWORD_MIN}
             required
+            autoComplete="new-password"
             value={pw2}
             onChange={(e) => setPw2(e.target.value)}
             placeholder="confirm"
@@ -275,16 +316,27 @@ export default function ProfileForm({
         <h2 className="font-display text-[1.15rem] font-bold">Delete account</h2>
         <p className="mt-1 mb-5 max-w-[52ch] text-[0.9rem] text-ink-soft">
           Removes your account and saved details. Past orders are kept for our
-          records (legal/accounting) but unlinked from you.
+          records (legal/accounting) but unlinked from you. Enter your password
+          to confirm.
         </p>
-        <button
-          type="button"
-          onClick={deleteAccount}
-          disabled={delBusy}
-          className="label-mono cursor-pointer border border-brg px-6 py-3 text-brg transition-colors hover:bg-brg hover:text-cream disabled:opacity-60"
-        >
-          {delBusy ? "Deleting…" : "Delete my account"}
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="password"
+            autoComplete="current-password"
+            value={delPw}
+            onChange={(e) => setDelPw(e.target.value)}
+            placeholder="your password"
+            className={`${field} max-w-[240px]`}
+          />
+          <button
+            type="button"
+            onClick={deleteAccount}
+            disabled={delBusy}
+            className="label-mono cursor-pointer border border-brg px-6 py-3 text-brg transition-colors hover:bg-brg hover:text-cream disabled:opacity-60"
+          >
+            {delBusy ? "Deleting…" : "Delete my account"}
+          </button>
+        </div>
       </div>
     </div>
   );
