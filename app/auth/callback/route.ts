@@ -10,7 +10,13 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type") as EmailOtpType | null;
-  const next = url.searchParams.get("next") || "/account";
+  // only allow an internal path — reject "//evil.com" and absolute URLs so the
+  // post-login redirect can't be turned into an open redirect for phishing.
+  const nextParam = url.searchParams.get("next") || "/account";
+  const next =
+    nextParam.startsWith("/") && !nextParam.startsWith("//")
+      ? nextParam
+      : "/account";
   const fail = new URL("/account/login?err=link", url.origin);
 
   const supabase = await createSupabaseServerClient();

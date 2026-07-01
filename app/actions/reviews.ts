@@ -23,15 +23,17 @@ export async function createReviewAction(input: {
   }
   const svc = createServiceClient();
 
-  // verified-buyer check: any of this account's paid orders includes the part
-  const orFilter = user.email
-    ? `user_id.eq.${user.id},email.eq.${user.email}`
-    : `user_id.eq.${user.id}`;
-  const { data: orders } = await svc
-    .from("orders")
-    .select("items, status, user_id, email")
-    .or(orFilter);
-  const bought = (orders ?? []).some(
+  // verified-buyer check: any of this account's paid orders includes the part.
+  // Two parameterised .eq queries (by account id, and by account email for
+  // guest checkouts) — no raw filter string, so no PostgREST filter injection.
+  const [byId, byEmail] = await Promise.all([
+    svc.from("orders").select("items, status").eq("user_id", user.id),
+    user.email
+      ? svc.from("orders").select("items, status").eq("email", user.email)
+      : Promise.resolve({ data: [] as { items: unknown; status: string }[] }),
+  ]);
+  const orders = [...(byId.data ?? []), ...(byEmail.data ?? [])];
+  const bought = orders.some(
     (o) =>
       PAID_STATES.includes(o.status) &&
       Array.isArray(o.items) &&
