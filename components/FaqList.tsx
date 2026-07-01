@@ -15,6 +15,9 @@ export default function FaqList({ items }: { items: FaqItem[] }) {
           <div key={i} className="border-b border-hairline">
             <button
               onClick={() => setOpen(isOpen ? null : i)}
+              aria-expanded={isOpen}
+              aria-controls={`faq-panel-${i}`}
+              id={`faq-trigger-${i}`}
               className="flex w-full cursor-pointer items-center justify-between gap-4 py-4 text-left"
             >
               <span className="font-display text-[1.02rem] font-bold">
@@ -23,6 +26,7 @@ export default function FaqList({ items }: { items: FaqItem[] }) {
               <motion.span
                 animate={{ rotate: isOpen ? 45 : 0 }}
                 transition={{ duration: 0.25 }}
+                aria-hidden="true"
                 className="font-mono text-[1.1rem] leading-none text-brg"
               >
                 +
@@ -31,6 +35,9 @@ export default function FaqList({ items }: { items: FaqItem[] }) {
             <AnimatePresence initial={false}>
               {isOpen && (
                 <motion.div
+                  id={`faq-panel-${i}`}
+                  role="region"
+                  aria-labelledby={`faq-trigger-${i}`}
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}

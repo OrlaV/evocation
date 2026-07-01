@@ -393,7 +393,12 @@ export async function updateOrderAction(input: {
 }
 
 // Real refund through Stripe, then mark the order + email the customer (once).
-export async function refundOrderAction(id: string): Promise<OrderActionResult> {
+// Pass amountPence to refund only part of the order (e.g. keep the outbound
+// postage on a "fits or refunded" return); omit it for a full refund.
+export async function refundOrderAction(
+  id: string,
+  amountPence?: number,
+): Promise<OrderActionResult> {
   await requireAdmin();
   const stripe = getStripe();
   if (!stripe) return { ok: false, msg: "Stripe isn't configured." };
@@ -411,6 +416,14 @@ export async function refundOrderAction(id: string): Promise<OrderActionResult> 
     return { ok: false, msg: "No Stripe session on this order." };
   }
 
+  const total = order.amount_pence ?? 0;
+  // sanitise the requested amount; a value < total means a partial refund
+  const amt =
+    amountPence && Number.isFinite(amountPence)
+      ? Math.max(1, Math.min(Math.round(amountPence), total || amountPence))
+      : undefined;
+  const isPartial = amt !== undefined && total > 0 && amt < total;
+
   try {
     const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
     const pi =
@@ -418,26 +431,36 @@ export async function refundOrderAction(id: string): Promise<OrderActionResult> 
         ? session.payment_intent
         : session.payment_intent?.id;
     if (!pi) return { ok: false, msg: "No payment intent — can't refund." };
-    await stripe.refunds.create({ payment_intent: pi });
+    await stripe.refunds.create({
+      payment_intent: pi,
+      ...(isPartial ? { amount: amt } : {}),
+    });
   } catch (e) {
     return { ok: false, msg: `Stripe refund failed: ${(e as Error).message}` };
   }
 
-  const patch: Record<string, unknown> = { status: "refunded" };
-  let note = "Refunded in Stripe";
+  // a partial refund leaves the order active (status unchanged); a full refund
+  // flips it to "refunded". The check constraint has no "partially refunded".
+  const patch: Record<string, unknown> = isPartial ? {} : { status: "refunded" };
+  const refundedPence = isPartial ? amt! : total;
+  let note = isPartial
+    ? `Partially refunded ${(refundedPence / 100).toFixed(2)} in Stripe`
+    : "Refunded in Stripe";
   if (order.email && emailConfigured()) {
     const mail = orderRefundedEmail({
       order_no: order.order_no,
-      amount_pence: order.amount_pence,
+      amount_pence: refundedPence,
     });
     const r = await sendEmail({ to: order.email, ...mail });
     if (r.ok) {
-      patch.refunded_at = new Date().toISOString();
+      if (!isPartial) patch.refunded_at = new Date().toISOString();
       note += " + email sent";
     }
   } else if (!emailConfigured()) note += " (email off — set RESEND_FROM)";
 
-  await svc.from("orders").update(patch).eq("id", id);
+  if (Object.keys(patch).length) {
+    await svc.from("orders").update(patch).eq("id", id);
+  }
   revalidatePath("/admin/orders");
   revalidatePath("/account");
   return { ok: true, msg: note };

@@ -16,7 +16,10 @@ export async function sendEmail({
   text,
 }: SendArgs): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM;
+  const rawFrom = process.env.RESEND_FROM;
+  // show a friendly sender name when RESEND_FROM is a bare address
+  const from =
+    rawFrom && !rawFrom.includes("<") ? `Evocation <${rawFrom}>` : rawFrom;
   if (!key || !from) {
     return {
       ok: false,

@@ -3,7 +3,17 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { createServiceClient } from "@/lib/supabase-server";
 import { sendEmail, emailConfigured } from "@/lib/email";
-import { orderConfirmationEmail } from "@/lib/order-emails";
+import {
+  orderConfirmationEmail,
+  adminOrderNotificationEmail,
+} from "@/lib/order-emails";
+
+// shop-owner recipients for internal order alerts (break-glass admin allowlist)
+const adminRecipients = () =>
+  (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
 /* Stripe webhook. Verifies the signature, then on a completed checkout writes
    the order to Supabase (service role, bypasses RLS) and emails a confirmation
@@ -50,18 +60,37 @@ export async function POST(req: Request) {
     }
 
     try {
-      // line items are best-effort — never let them block writing the order
-      let items: Array<{ name: string | null; qty: number; amount_pence: number | null }> = [];
+      // line items are best-effort — never let them block writing the order.
+      // Expand the product so we can persist the ids the fulfilment side needs
+      // (which EVO / product / option to print), not just a display string.
+      let items: Array<{
+        name: string | null;
+        qty: number;
+        amount_pence: number | null;
+        product_id?: string | null;
+        evo_no?: string | null;
+        option?: string | null;
+      }> = [];
       try {
         const lineItems = await stripe.checkout.sessions.listLineItems(
           session.id,
-          { limit: 100 },
+          { limit: 100, expand: ["data.price.product"] },
         );
-        items = lineItems.data.map((li) => ({
-          name: li.description,
-          qty: li.quantity ?? 1,
-          amount_pence: li.amount_total,
-        }));
+        items = lineItems.data.map((li) => {
+          const product = li.price?.product;
+          const meta =
+            product && typeof product === "object" && "metadata" in product
+              ? (product.metadata as Record<string, string> | undefined)
+              : undefined;
+          return {
+            name: li.description,
+            qty: li.quantity ?? 1,
+            amount_pence: li.amount_total,
+            product_id: meta?.product_id || null,
+            evo_no: meta?.evo_no || null,
+            option: meta?.option || null,
+          };
+        });
       } catch (e) {
         console.error("listLineItems:", (e as Error).message);
         items = [
@@ -129,17 +158,87 @@ export async function POST(req: Request) {
       }
       console.log("[stripe webhook] order saved:", session.id, "→", email ?? "(no email)");
 
-      if (email && emailConfigured()) {
-        const mail = orderConfirmationEmail({
-          order_no: inserted?.order_no,
-          amount_pence: session.amount_total,
-          items,
-        });
-        await sendEmail({ to: email, ...mail });
+      if (emailConfigured()) {
+        if (email) {
+          const mail = orderConfirmationEmail({
+            order_no: inserted?.order_no,
+            amount_pence: session.amount_total,
+            items,
+          });
+          await sendEmail({ to: email, ...mail });
+        }
+        // internal heads-up so the owner starts the print job promptly
+        const admins = adminRecipients();
+        if (admins.length) {
+          const notif = adminOrderNotificationEmail({
+            order_no: inserted?.order_no,
+            amount_pence: session.amount_total,
+            items,
+            email,
+          });
+          for (const to of admins) await sendEmail({ to, ...notif });
+        }
       }
     } catch (e) {
       console.error("webhook handler:", (e as Error).message);
       return NextResponse.json({ error: "handler error" }, { status: 500 });
+    }
+  }
+
+  // Reconcile refunds issued directly in the Stripe dashboard (the admin action
+  // already marks the row; this catches out-of-band refunds so orders never
+  // diverge from Stripe). Matched via the charge's payment_intent → session.
+  if (event.type === "charge.refunded") {
+    const charge = event.data.object as Stripe.Charge;
+    const pi =
+      typeof charge.payment_intent === "string"
+        ? charge.payment_intent
+        : charge.payment_intent?.id;
+    if (pi) {
+      try {
+        const sessions = await stripe.checkout.sessions.list({
+          payment_intent: pi,
+          limit: 1,
+        });
+        const sid = sessions.data[0]?.id;
+        if (sid) {
+          const supabase = createServiceClient();
+          const { data: row } = await supabase
+            .from("orders")
+            .select("id, status, refunded_at")
+            .eq("stripe_session_id", sid)
+            .maybeSingle();
+          if (row && row.status !== "refunded") {
+            await supabase
+              .from("orders")
+              .update({
+                status: "refunded",
+                refunded_at: row.refunded_at ?? new Date().toISOString(),
+              })
+              .eq("id", row.id);
+            console.log("[stripe webhook] order reconciled as refunded:", sid);
+          }
+        }
+      } catch (e) {
+        console.error("charge.refunded reconcile:", (e as Error).message);
+      }
+    }
+  }
+
+  // Chargeback opened — the status check constraint doesn't allow 'disputed',
+  // so just alert the owner (a status column change would need a migration).
+  if (event.type === "charge.dispute.created") {
+    const admins = adminRecipients();
+    if (admins.length && emailConfigured()) {
+      const dispute = event.data.object as Stripe.Dispute;
+      const amount = ((dispute.amount ?? 0) / 100).toFixed(2);
+      for (const to of admins)
+        await sendEmail({
+          to,
+          subject: `⚠ Chargeback opened — £${amount}`,
+          html: `<p>A Stripe dispute was opened (£${amount}, reason: ${dispute.reason}). Respond in the Stripe dashboard before the deadline.</p>`,
+          text: `A Stripe dispute was opened (£${amount}, reason: ${dispute.reason}). Respond in the Stripe dashboard before the deadline.`,
+        });
     }
   }
 

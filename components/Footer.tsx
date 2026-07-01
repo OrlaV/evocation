@@ -1,10 +1,12 @@
 import LogoWordmark from "./LogoWordmark";
+import NewsletterSignup from "./NewsletterSignup";
 
 const COLUMNS = [
   {
     title: "Shop",
     links: [
       { label: "The Registry", href: "/shop" },
+      { label: "Parts by vehicle", href: "/vehicles" },
       { label: "Request a part", href: "/#queue" },
       { label: "Your account", href: "/account" },
     ],
@@ -47,6 +49,9 @@ export default function Footer() {
               — we don&apos;t make structural or safety parts. Printed in the
               UK, shipped worldwide.
             </p>
+            <div className="mt-6 max-w-[34ch]">
+              <NewsletterSignup />
+            </div>
           </div>
           {COLUMNS.map((col) => (
             <div key={col.title}>

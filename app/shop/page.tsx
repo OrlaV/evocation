@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: "Shop — Evocation",
   description:
     "Discontinued interior & trim parts for youngtimers and classics, revived by Evocation. Printed to order in the UK, shipped worldwide.",
+  // canonical stays on the bare /shop so the ?q=/?make= filter permutations
+  // don't get indexed as duplicates.
+  alternates: { canonical: "/shop" },
 };
 
 // keep the registry fresh without a rebuild when products change directly in DB
@@ -16,9 +19,15 @@ export const revalidate = 3600;
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    make?: string;
+    model?: string;
+    hand?: string;
+    sort?: string;
+  }>;
 }) {
-  const [products, { q }] = await Promise.all([
+  const [products, sp] = await Promise.all([
     getPublishedProducts(),
     searchParams,
   ]);
@@ -38,7 +47,7 @@ export default async function ShopPage({
           </Reveal>
         </div>
 
-        <ShopGrid products={products} initialQuery={q ?? ""} />
+        <ShopGrid products={products} initial={sp} />
 
         <Reveal delay={0.1} className="mt-[clamp(20px,3vw,40px)]">
           <a

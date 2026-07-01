@@ -76,6 +76,7 @@ export default function BuyBox({
     : `Order interest — ${evoNo} (${primaryRef})`;
 
   return (
+    <>
     <div className="border-t border-hairline pt-6">
       {hasOptions && (
         <div className="mb-5">
@@ -191,5 +192,32 @@ export default function BuyBox({
         <span className="text-brg">Fits or refunded</span>
       </div>
     </div>
+
+    {/* sticky mobile buy bar — keeps price + CTA reachable while scrolling the
+        long product page. Mirrors the selected option/quantity. Desktop hides
+        it (the buy box sits in the fixed right column ≥981px). */}
+    {checkoutEnabled && (
+      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-hairline bg-[color-mix(in_srgb,var(--cream)_94%,transparent)] px-4 py-3 backdrop-blur-md min-[981px]:hidden">
+        <div className="flex flex-col">
+          <span className="font-num text-[1.4rem] leading-none">
+            {formatPrice(price)}
+          </span>
+          {active && (
+            <span className="label-mono !text-[0.56rem] !tracking-[0.1em] text-ink-soft">
+              {active.label}
+            </span>
+          )}
+        </div>
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          type="button"
+          onClick={addToCart}
+          className="label-mono chamfer ml-auto flex-1 cursor-pointer bg-brg px-5 py-3.5 font-bold text-cream transition-colors hover:bg-brg-deep"
+        >
+          {added ? "Added to cart ✓" : "Add to cart"}
+        </motion.button>
+      </div>
+    )}
+    </>
   );
 }

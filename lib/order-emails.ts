@@ -75,6 +75,27 @@ export function orderShippedEmail(o: OrderForEmail): Email {
   };
 }
 
+// Internal heads-up to the shop owner — each paid order triggers a physical
+// print job, so the operator needs a push, not to poll /admin/orders.
+export function adminOrderNotificationEmail(
+  o: OrderForEmail & { email?: string | null },
+): Email {
+  const total = formatPrice(o.amount_pence ?? 0);
+  const lines = itemLines(o.items);
+  return {
+    subject: `New order ${orderNoLabel(o.order_no)} — ${total}${o.email ? ` · ${o.email}` : ""}`,
+    html: shell(
+      `<h1 style="font-size:22px;margin:12px 0">New order to print</h1>
+       <p style="font-size:15px;line-height:1.6">${lines.join("<br>")}</p>
+       <p style="font-size:15px"><strong>Total: ${total}</strong>${o.email ? `<br>Customer: ${o.email}` : ""}</p>
+       <p style="font-size:13px;color:#8a8f92"><a href="${SITE_URL}/admin/orders" style="color:#d8261d">Open in admin →</a></p>`,
+    ),
+    text: `New order ${orderNoLabel(o.order_no)} — ${total}\n${o.email ?? ""}\n\n${lines.join(
+      "\n",
+    )}\n\n${SITE_URL}/admin/orders`,
+  };
+}
+
 export function orderRefundedEmail(o: OrderForEmail): Email {
   const total = formatPrice(o.amount_pence ?? 0);
   return {

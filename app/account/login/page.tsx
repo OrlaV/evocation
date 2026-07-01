@@ -14,6 +14,7 @@ export default function AccountLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [needsConfirm, setNeedsConfirm] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // a failed/expired email link bounces here with ?err=link. Read after mount
@@ -125,15 +126,26 @@ export default function AccountLoginPage() {
               className="border border-hairline bg-transparent px-4 py-3 font-mono text-[0.82rem] tracking-[0.06em] text-ink outline-none transition-colors placeholder:text-ink-soft/65 focus:border-ink"
             />
             {mode !== "forgot" && (
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={mode === "signup" ? "password (min. 8 chars)" : "password"}
-                className="border border-hairline bg-transparent px-4 py-3 font-mono text-[0.82rem] tracking-[0.06em] text-ink outline-none transition-colors placeholder:text-ink-soft/65 focus:border-ink"
-              />
+              <div className="flex items-stretch border border-hairline transition-colors focus-within:border-ink">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={mode === "signup" ? "password (min. 8 chars)" : "password"}
+                  className="min-w-0 flex-1 bg-transparent px-4 py-3 font-mono text-[0.82rem] tracking-[0.06em] text-ink outline-none placeholder:text-ink-soft/65"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                  className="label-mono px-3.5 !text-[0.6rem] text-ink-soft transition-colors hover:text-brg"
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
             )}
             <button
               type="submit"

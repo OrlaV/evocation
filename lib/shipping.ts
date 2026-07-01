@@ -40,17 +40,23 @@ export const DEFAULT_SHIPPING: ShippingSettings = {
       estimate: [2, 4],
     },
     {
+      // Priced HIGH on purpose (conservative) — Royal Mail Int'l Tracked to the
+      // dearest EU zone is ~£22.40 at 2kg (Apr-2025 tariff); the large tier
+      // covers heavier/bulky boxes that fall to Int'l Standard. Better to
+      // slightly over-quote than lose margin on export. Adjustable in /admin.
       key: "eu",
       label: "Europe",
       carrier: "Royal Mail Int'l Tracked",
-      rates: { small: 1195, medium: 1795, large: 2995 }, // PLACEHOLDER
+      rates: { small: 1485, medium: 2240, large: 3495 },
       estimate: [3, 7],
     },
     {
+      // Rest of world — Int'l Tracked to the dearest world zones runs well above
+      // the EU rates at 2kg; kept deliberately high to stay safe worldwide.
       key: "world",
       label: "Rest of world",
       carrier: "Royal Mail Int'l Tracked",
-      rates: { small: 1695, medium: 2495, large: 3995 }, // PLACEHOLDER
+      rates: { small: 2095, medium: 3295, large: 4995 },
       estimate: [5, 12],
     },
   ],

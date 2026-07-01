@@ -36,6 +36,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: TITLE,
   description: DESCRIPTION,
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: "Evocation",
@@ -65,21 +66,55 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              name: "Evocation",
-              url: SITE_URL,
-              description:
-                "Discontinued interior & trim parts for classics and youngtimers, 3D-scanned from originals and remade with an OEM-grain finish.",
-              email: "hello@evocation.uk",
-              areaServed: "Worldwide",
-            }),
+            __html: JSON.stringify([
+              {
+                "@context": "https://schema.org",
+                "@type": "Organization",
+                name: "Evocation",
+                url: SITE_URL,
+                logo: `${SITE_URL}/opengraph-image`,
+                description:
+                  "Discontinued interior & trim parts for classics and youngtimers, 3D-scanned from originals and remade with an OEM-grain finish.",
+                email: "contact@evocation.store",
+                areaServed: "Worldwide",
+                contactPoint: {
+                  "@type": "ContactPoint",
+                  email: "contact@evocation.store",
+                  contactType: "customer support",
+                  areaServed: "Worldwide",
+                  availableLanguage: "English",
+                },
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                name: "Evocation",
+                url: SITE_URL,
+                potentialAction: {
+                  "@type": "SearchAction",
+                  target: {
+                    "@type": "EntryPoint",
+                    urlTemplate: `${SITE_URL}/shop?q={search_term_string}`,
+                  },
+                  "query-input": "required name=search_term_string",
+                },
+              },
+            ]),
           }}
         />
+        <a
+          href="#main-content"
+          className="label-mono sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-4 focus:z-[100] focus:bg-ink focus:px-4 focus:py-2 focus:text-cream"
+        >
+          Skip to content
+        </a>
         <CartProvider>
           <Header />
-          {children}
+          {/* `contents` keeps this wrapper layout-neutral so page <main>
+              elements stay direct flex children (footer still pushes down). */}
+          <div id="main-content" className="contents">
+            {children}
+          </div>
           <Footer />
         </CartProvider>
         <Analytics />

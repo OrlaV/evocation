@@ -12,10 +12,10 @@ export default function TermsPage() {
   return (
     <DocPage kicker="Legal" title="Terms & Conditions" updated="June 2026" draft>
       <P>
-        These terms govern your use of evocation.uk and any purchase you make
+        These terms govern your use of evocation.store and any purchase you make
         from Evocation (&ldquo;we&rdquo;, &ldquo;us&rdquo;). By placing an order
         you accept them. Evocation is operated by [legal entity name], [registered
-        address], UK. Contact: hello@evocation.uk.
+        address], UK. Contact: contact@evocation.store.
       </P>
 
       <H2>What we sell</H2>

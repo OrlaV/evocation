@@ -1,17 +1,15 @@
-const ITEMS = [
-  { text: "RTC3265", status: "Revived" },
-  { text: "928.521.147.02", status: "Revived" },
-  { text: "911.552.103.01", status: "In queue" },
-  { text: "MWC7780", status: "In queue" },
-  { text: "0005423718", status: "In queue" },
+export type TickerItem = { text: string; status: "Revived" | "In queue" | null };
+
+// Static brand lines always shown at the tail of the marquee.
+const TAGLINES: TickerItem[] = [
   { text: "Interior & trim only", status: null },
   { text: "Printed to order in the UK · Ships worldwide", status: null },
 ];
 
-function Track() {
+function Track({ items }: { items: TickerItem[] }) {
   return (
     <>
-      {ITEMS.map((item, i) => (
+      {items.map((item, i) => (
         <span
           key={i}
           className="label-mono inline-block px-7 !text-[0.74rem] !tracking-[0.16em] text-ink-soft"
@@ -35,15 +33,18 @@ function Track() {
   );
 }
 
-export default function Ticker() {
+// `items` is built from real data on the server (revived parts + live queue).
+// Falls back to the taglines alone when the catalogue/queue is still empty.
+export default function Ticker({ items }: { items?: TickerItem[] }) {
+  const track = [...(items ?? []), ...TAGLINES];
   return (
     <div
       aria-hidden="true"
       className="marquee-mask marquee-paused overflow-hidden border-y border-hairline bg-cream-deep py-2.5 whitespace-nowrap"
     >
       <div className="animate-marquee inline-block">
-        <Track />
-        <Track />
+        <Track items={track} />
+        <Track items={track} />
       </div>
     </div>
   );

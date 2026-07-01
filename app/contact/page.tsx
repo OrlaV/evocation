@@ -16,10 +16,10 @@ export default function ContactPage() {
       intro="Real people, in the UK. We usually reply within one working day."
     >
       <a
-        href="mailto:hello@evocation.uk"
+        href="mailto:contact@evocation.store"
         className="font-display mt-2 inline-block text-[clamp(1.4rem,3vw,2rem)] font-bold text-brg hover:underline"
       >
-        hello@evocation.uk
+        contact@evocation.store
       </a>
 
       <H2>Before you buy</H2>

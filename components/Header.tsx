@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   motion,
@@ -37,6 +37,16 @@ export default function Header() {
   });
 
   useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 12));
+
+  // close the mobile menu on Escape (and when navigating to a new route)
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
     <motion.header

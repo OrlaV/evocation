@@ -19,7 +19,9 @@ export async function getPublishedProducts(): Promise<Product[]> {
     .order("created_at", { ascending: true });
   if (error) {
     console.error("getPublishedProducts:", error.message);
-    return SEED_PRODUCTS;
+    // stay consistent with the nominal path — never leak draft products,
+    // even when falling back to the seed on a DB error.
+    return SEED_PRODUCTS.filter((p) => p.status === "published");
   }
   return (data as Product[]) ?? [];
 }

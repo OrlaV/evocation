@@ -41,8 +41,8 @@ Copy from `.env.local`, plus the two new ones at the bottom:
 | `STRIPE_TAX_ENABLED` | `true` only after Stripe Tax is configured |
 | `ADMIN_EMAILS` | Break-glass admin allowlist (the DB `admins` table is the main source) |
 | `RESEND_API_KEY` | Already set |
-| **`RESEND_FROM`** | **[you] NEW** — a verified sending domain in Resend (e.g. `orders@evocation.uk`). Until set, order emails stay inert. |
-| **`NEXT_PUBLIC_SITE_URL`** | **[you] NEW** — the production URL, e.g. `https://evocation.uk` (defaults to that anyway, but set it explicitly). |
+| **`RESEND_FROM`** | Sending address on the verified Resend domain — set to `contact@evocation.store`. Until set, order emails stay inert. |
+| **`NEXT_PUBLIC_SITE_URL`** | The production URL, e.g. `https://www.evocation.store` (this is the default). Set it explicitly in Vercel. |
 
 ## 4. Supabase config **[you]**
 

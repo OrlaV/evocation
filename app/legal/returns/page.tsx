@@ -30,7 +30,7 @@ export default function ReturnsPage() {
         If a part arrives damaged or fails through a manufacturing fault of ours
         — not wear, UV ageing from normal use, accident or incorrect fitting —
         we&rsquo;ll exchange it. Send a photo and your order date to
-        hello@evocation.uk.
+        contact@evocation.store.
       </P>
 
       <H2>Change of mind</H2>
@@ -45,7 +45,7 @@ export default function ReturnsPage() {
       <H2>How to return</H2>
       <UL
         items={[
-          "Email hello@evocation.uk with your order number — we'll confirm the return address.",
+          "Email contact@evocation.store with your order number — we'll confirm the return address.",
           "Pack the part safely; include a note with your order number.",
           "Refunds are issued to your original payment method once we receive the part, typically within [5] working days.",
           "Return postage for a non-fit return is [your policy — e.g. covered by us / paid by you]; faulty returns are always on us.",
@@ -55,7 +55,7 @@ export default function ReturnsPage() {
       <H2>Questions</H2>
       <P>
         Not sure whether a part will fit? Ask us first — email your model and
-        chassis number to hello@evocation.uk and we&rsquo;ll check before you
+        chassis number to contact@evocation.store and we&rsquo;ll check before you
         buy.
       </P>
     </DocPage>

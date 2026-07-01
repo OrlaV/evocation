@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <P>
         This policy explains how Evocation ([legal entity], [address], UK)
         handles your personal data under UK GDPR. We are the data controller.
-        Questions: hello@evocation.uk.
+        Questions: contact@evocation.store.
       </P>
 
       <H2>What we collect</H2>
@@ -57,7 +57,7 @@ export default function PrivacyPage() {
       <H2>Your rights</H2>
       <P>
         You can access, correct, export or erase your data, object to or
-        restrict processing, and withdraw consent. Email hello@evocation.uk;
+        restrict processing, and withdraw consent. Email contact@evocation.store;
         you also have the right to complain to the UK ICO (ico.org.uk).
       </P>
 

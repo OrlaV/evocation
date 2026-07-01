@@ -8,7 +8,9 @@ let _stripe: Stripe | null = null;
 export function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return null;
-  if (!_stripe) _stripe = new Stripe(key);
+  // Pin the API version so a dashboard upgrade can't silently change the shape
+  // of webhook payloads / responses under us. Matches the SDK's bundled version.
+  if (!_stripe) _stripe = new Stripe(key, { apiVersion: "2026-06-24.dahlia" });
   return _stripe;
 }
 

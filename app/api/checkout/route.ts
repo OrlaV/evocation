@@ -53,18 +53,34 @@ export async function POST(req: Request) {
   const packItems: PackItem[] = [];
   let firstEvo = "";
   let firstRefs = "";
+  // items the buyer asked for that we couldn't honour (unpublished / removed /
+  // option gone) — surfaced so they're never silently charged for less.
+  const dropped: string[] = [];
 
-  for (const it of requested) {
-    if (!it?.slug) continue;
-    const product = await getProductBySlug(it.slug);
-    if (!product) continue;
-    const option = it.optionKey
-      ? (product.options ?? []).find((o) => o.key === it.optionKey)
-      : undefined;
-    const amount = option ? option.price_pence : product.price_pence;
-    if (!amount || amount <= 0) continue;
+  try {
+    for (const it of requested) {
+      if (!it?.slug) continue;
+      const product = await getProductBySlug(it.slug);
+      if (!product) {
+        dropped.push(it.slug);
+        continue;
+      }
+      // an explicit option that no longer exists must NOT fall back to the base
+      // price (could be a placeholder) — treat it as a dropped line instead.
+      const option = it.optionKey
+        ? (product.options ?? []).find((o) => o.key === it.optionKey)
+        : undefined;
+      if (it.optionKey && !option) {
+        dropped.push(product.name);
+        continue;
+      }
+      const amount = option ? option.price_pence : product.price_pence;
+      if (!amount || amount <= 0) {
+        dropped.push(product.name);
+        continue;
+      }
 
-    const qty = Math.max(1, Math.min(20, Math.round(it.qty ?? 1)));
+      const qty = Math.max(1, Math.min(20, Math.round(it.qty ?? 1)));
     const label = option ? `${product.name} — ${option.label}` : product.name;
     const refs = option
       ? option.items.map((x) => `${x.qty}×${x.ref}`).join(", ")
@@ -93,12 +109,29 @@ export async function POST(req: Request) {
         },
       },
     });
+    }
+  } catch (e) {
+    console.error("checkout cart read:", (e as Error).message);
+    return NextResponse.json(
+      { error: "Couldn't verify your cart — please try again." },
+      { status: 503 },
+    );
   }
 
   if (!lineItems.length) {
     return NextResponse.json(
       { error: "Nothing in your cart is orderable yet." },
       { status: 400 },
+    );
+  }
+  // some items resolved but others didn't → stop rather than charge for a
+  // partial cart the buyer didn't confirm. They can refresh and retry.
+  if (dropped.length) {
+    return NextResponse.json(
+      {
+        error: `Some items are no longer available (${dropped.join(", ")}). Please review your cart and try again.`,
+      },
+      { status: 409 },
     );
   }
 

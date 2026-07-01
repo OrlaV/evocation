@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Product } from "@/lib/types";
 import { normalizeRef, optionRefs } from "@/lib/types";
 import { PartCard } from "./Registry";
@@ -14,6 +14,7 @@ const SORTS = [
 ] as const;
 
 type SortKey = (typeof SORTS)[number]["key"];
+const SORT_KEYS = SORTS.map((s) => s.key) as readonly string[];
 
 // does a product match a free-text query (name, OEM refs, or vehicle)?
 function matches(p: Product, q: string): boolean {
@@ -28,16 +29,28 @@ function matches(p: Product, q: string): boolean {
   return false;
 }
 
+export type ShopFilters = {
+  q?: string;
+  make?: string;
+  model?: string;
+  hand?: string;
+  sort?: string;
+};
+
 export default function ShopGrid({
   products,
-  initialQuery = "",
+  initial = {},
 }: {
   products: Product[];
-  initialQuery?: string;
+  initial?: ShopFilters;
 }) {
-  const [sort, setSort] = useState<SortKey>("first");
-  const [query, setQuery] = useState(initialQuery);
-  const [make, setMake] = useState<string>("");
+  const [sort, setSort] = useState<SortKey>(
+    (SORT_KEYS.includes(initial.sort ?? "") ? initial.sort : "first") as SortKey,
+  );
+  const [query, setQuery] = useState(initial.q ?? "");
+  const [make, setMake] = useState<string>(initial.make ?? "");
+  const [model, setModel] = useState<string>(initial.model ?? "");
+  const [hand, setHand] = useState<string>(initial.hand ?? "");
 
   // makes present in the catalogue, for the filter
   const makes = useMemo(() => {
@@ -46,10 +59,50 @@ export default function ShopGrid({
     return [...s].sort();
   }, [products]);
 
+  // models for the selected make (all models when no make is picked)
+  const models = useMemo(() => {
+    const s = new Set<string>();
+    products.forEach((p) =>
+      p.fitment.forEach((f) => {
+        if ((!make || f.make === make) && f.model) s.add(f.model);
+      }),
+    );
+    return [...s].sort();
+  }, [products, make]);
+
+  // only surface the hand-of-drive filter when parts actually declare it
+  const hasHand = useMemo(
+    () => products.some((p) => p.fitment.some((f) => f.hand)),
+    [products],
+  );
+
+  // changing make clears a now-irrelevant model (done in the handler, not an
+  // effect, to avoid a cascading re-render)
+  const pickMake = (m: string) => {
+    setMake(m);
+    setModel("");
+  };
+
+  // keep the URL in sync so any filtered view is shareable (copy the link and
+  // it reopens with the same search / facets). replaceState avoids a nav.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("q", query.trim());
+    if (make) params.set("make", make);
+    if (model) params.set("model", model);
+    if (hand) params.set("hand", hand);
+    if (sort !== "first") params.set("sort", sort);
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `/shop?${qs}` : "/shop");
+  }, [query, make, model, hand, sort]);
+
   const visible = useMemo(() => {
     const list = products.filter(
       (p) =>
-        (!make || p.fitment.some((f) => f.make === make)) && matches(p, query),
+        (!make || p.fitment.some((f) => f.make === make)) &&
+        (!model || p.fitment.some((f) => f.model === model)) &&
+        (!hand || p.fitment.some((f) => f.hand === hand)) &&
+        matches(p, query),
     );
     const byDate = (a: Product, b: Product) =>
       new Date(a.created_at ?? 0).getTime() -
@@ -66,7 +119,14 @@ export default function ShopGrid({
       case "evo":
         return list.sort((a, b) => a.evo_no.localeCompare(b.evo_no));
     }
-  }, [products, sort, query, make]);
+  }, [products, sort, query, make, model, hand]);
+
+  const chip = (active: boolean) =>
+    `label-mono cursor-pointer border px-2.5 py-1 !text-[0.64rem] transition-colors ${
+      active
+        ? "border-ink bg-ink text-cream"
+        : "border-hairline text-ink-soft hover:border-ink"
+    }`;
 
   return (
     <>
@@ -94,31 +154,54 @@ export default function ShopGrid({
 
       {/* make filter */}
       {makes.length > 1 && (
-        <div className="mb-5 flex flex-wrap items-center gap-2">
-          <span className="label-mono !text-[0.64rem] !tracking-[0.12em] text-ink-soft">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="label-mono w-14 !text-[0.64rem] !tracking-[0.12em] text-ink-soft">
             Make
           </span>
-          <button
-            onClick={() => setMake("")}
-            className={`label-mono cursor-pointer border px-2.5 py-1 !text-[0.64rem] transition-colors ${
-              make === ""
-                ? "border-ink bg-ink text-cream"
-                : "border-hairline text-ink-soft hover:border-ink"
-            }`}
-          >
+          <button onClick={() => pickMake("")} className={chip(make === "")}>
             All
           </button>
           {makes.map((m) => (
+            <button key={m} onClick={() => pickMake(m)} className={chip(make === m)}>
+              {m}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* model filter */}
+      {models.length > 1 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="label-mono w-14 !text-[0.64rem] !tracking-[0.12em] text-ink-soft">
+            Model
+          </span>
+          <button onClick={() => setModel("")} className={chip(model === "")}>
+            All
+          </button>
+          {models.map((m) => (
             <button
               key={m}
-              onClick={() => setMake(m)}
-              className={`label-mono cursor-pointer border px-2.5 py-1 !text-[0.64rem] transition-colors ${
-                make === m
-                  ? "border-ink bg-ink text-cream"
-                  : "border-hairline text-ink-soft hover:border-ink"
-              }`}
+              onClick={() => setModel(m)}
+              className={chip(model === m)}
             >
               {m}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* hand of drive filter */}
+      {hasHand && (
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <span className="label-mono w-14 !text-[0.64rem] !tracking-[0.12em] text-ink-soft">
+            Drive
+          </span>
+          <button onClick={() => setHand("")} className={chip(hand === "")}>
+            Any
+          </button>
+          {["LHD", "RHD"].map((h) => (
+            <button key={h} onClick={() => setHand(h)} className={chip(hand === h)}>
+              {h}
             </button>
           ))}
         </div>

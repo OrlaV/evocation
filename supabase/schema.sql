@@ -188,6 +188,17 @@ create policy "customers read own orders"
   on public.orders for select to authenticated
   using (email = auth.email() or user_id = auth.uid());
 
+-- ---------- newsletter (voir migration 013) ----------
+-- capture "notify me about new revivals" — écrit en service role, RLS verrouillée.
+create table if not exists public.newsletter_signups (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  source text,
+  user_id uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+alter table public.newsletter_signups enable row level security;
+
 -- ---------- storage : images produits ----------
 insert into storage.buckets (id, name, public)
 values ('product-images', 'product-images', true)

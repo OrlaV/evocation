@@ -165,7 +165,7 @@ export default function Registry({ products }: { products: Product[] }) {
           </Reveal>
         </div>
 
-        <div className="grid grid-cols-2 gap-[clamp(8px,1vw,16px)] min-[861px]:grid-cols-4">
+        <div className="grid grid-cols-2 gap-[clamp(6px,0.6vw,8px)] min-[861px]:grid-cols-4">
           {products.map((part, i) => (
             <PartCard key={part.evo_no} part={part} index={i} compact />
           ))}

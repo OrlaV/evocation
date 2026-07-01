@@ -72,6 +72,7 @@ function OrderCard({ order }: { order: AdminOrder }) {
   const router = useRouter();
   const [status, setStatus] = useState(order.status);
   const [tracking, setTracking] = useState(order.tracking_number ?? "");
+  const [refundAmt, setRefundAmt] = useState(""); // £, blank = full refund
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [pending, start] = useTransition();
 
@@ -93,13 +94,21 @@ function OrderCard({ order }: { order: AdminOrder }) {
     run(() => updateOrderAction({ id: order.id, status, tracking_number: tracking }));
   const resend = () => run(() => resendConfirmationAction(order.id));
   const refund = () => {
+    const parsed = parseFloat(refundAmt.replace(",", "."));
+    const amountPence =
+      refundAmt.trim() && Number.isFinite(parsed) && parsed > 0
+        ? Math.round(parsed * 100)
+        : undefined;
+    const label = amountPence
+      ? `${formatPrice(amountPence)} (partial)`
+      : formatPrice(order.amount_pence ?? 0);
     if (
       !window.confirm(
-        `Refund ${formatPrice(order.amount_pence ?? 0)} to ${order.email ?? "the customer"} via Stripe? This can't be undone.`,
+        `Refund ${label} to ${order.email ?? "the customer"} via Stripe? This can't be undone.`,
       )
     )
       return;
-    run(() => refundOrderAction(order.id));
+    run(() => refundOrderAction(order.id, amountPence));
   };
 
   return (
@@ -227,14 +236,26 @@ function OrderCard({ order }: { order: AdminOrder }) {
           Resend confirmation
         </button>
         {!refunded && (
-          <button
-            type="button"
-            onClick={refund}
-            disabled={pending}
-            className="label-mono cursor-pointer border border-ink-soft px-3 py-2 !text-[0.64rem] text-ink-soft transition-colors hover:border-brg hover:text-brg disabled:opacity-60"
-          >
-            Refund via Stripe
-          </button>
+          <span className="flex items-center gap-1.5">
+            <span className="label-mono !text-[0.6rem] text-ink-soft">£</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={refundAmt}
+              onChange={(e) => setRefundAmt(e.target.value)}
+              placeholder="full"
+              aria-label="Refund amount in pounds (blank = full)"
+              className="font-num w-16 border border-hairline bg-transparent px-1.5 py-1.5 !text-[0.8rem] outline-none focus:border-brg"
+            />
+            <button
+              type="button"
+              onClick={refund}
+              disabled={pending}
+              className="label-mono cursor-pointer border border-ink-soft px-3 py-2 !text-[0.64rem] text-ink-soft transition-colors hover:border-brg hover:text-brg disabled:opacity-60"
+            >
+              Refund via Stripe
+            </button>
+          </span>
         )}
       </div>
 

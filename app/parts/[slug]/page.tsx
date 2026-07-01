@@ -4,6 +4,7 @@ import { getProductBySlug, getPublishedProducts } from "@/lib/products";
 import { fitmentSpec, optionRefs, refLabels } from "@/lib/types";
 import { imageUrl } from "@/lib/storage";
 import { SITE_URL } from "@/lib/site";
+import { vehicleSlug } from "@/lib/vehicles";
 import ProductGallery from "@/components/ProductGallery";
 import FaqList from "@/components/FaqList";
 import BuyBox from "@/components/BuyBox";
@@ -105,22 +106,36 @@ export default async function ProductPage({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Shop", item: `${SITE_URL}/shop` },
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: "The Registry", item: `${SITE_URL}/shop` },
       {
         "@type": "ListItem",
-        position: 2,
+        position: 3,
         name: product.name,
         item: `${SITE_URL}/parts/${product.slug}`,
       },
     ],
   };
+  // FAQ rich result — only emitted when the part actually has Q/A pairs.
+  const faqLd = product.faq.length
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: product.faq.map((f) => ({
+          "@type": "Question",
+          name: f.q,
+          acceptedAnswer: { "@type": "Answer", text: f.a },
+        })),
+      }
+    : null;
+  const structuredData = [jsonLd, breadcrumbLd, ...(faqLd ? [faqLd] : [])];
 
   return (
     <main className="relative overflow-hidden">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify([jsonLd, breadcrumbLd]),
+          __html: JSON.stringify(structuredData),
         }}
       />
       <div className="wrap pt-8 pb-[clamp(56px,8vh,100px)]">
@@ -330,6 +345,21 @@ export default async function ProductPage({
             </a>
           </Reveal>
         </div>
+
+        {/* link to the vehicle landing page (SEO + navigation) */}
+        {fit?.make && fit?.model && (
+          <div className="mt-[clamp(40px,6vh,72px)]">
+            <a
+              href={`/vehicles/${vehicleSlug(`${fit.make} ${fit.model}`)}`}
+              className="label-mono group inline-flex items-center gap-1.5 text-brg"
+            >
+              See all {fit.make} {fit.model} parts
+              <span className="transition-transform duration-300 group-hover:translate-x-1">
+                →
+              </span>
+            </a>
+          </div>
+        )}
 
         {/* related parts (same make) */}
         {related.length > 0 && (

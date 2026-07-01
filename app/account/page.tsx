@@ -23,17 +23,40 @@ type OrderRow = {
   created_at: string;
 };
 
+type RequestRow = {
+  id: string;
+  part_label: string;
+  make: string | null;
+  model: string | null;
+  kind: string | null;
+  notified_at: string | null;
+  created_at: string;
+};
+
 export default async function AccountPage() {
   const user = await requireUser();
 
-  // session client: RLS ("customers read own orders") scopes this to the
-  // signed-in user's email — no service role on a customer-facing page.
+  // session client: RLS ("customers read own orders" / "read own requests")
+  // scopes both queries to the signed-in user — no service role on a
+  // customer-facing page.
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from("orders")
-    .select("id, order_no, amount_pence, items, status, tracking_number, created_at")
-    .order("created_at", { ascending: false });
+  const [{ data }, { data: reqData }] = await Promise.all([
+    supabase
+      .from("orders")
+      .select(
+        "id, order_no, amount_pence, items, status, tracking_number, created_at",
+      )
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("queue_requests")
+      .select("id, part_label, make, model, kind, notified_at, created_at")
+      .order("created_at", { ascending: false }),
+  ]);
   const orders = (data as OrderRow[]) ?? [];
+  // the parts this account has asked for / voted on (exclude anonymous buy-intent)
+  const requests = ((reqData as RequestRow[]) ?? []).filter(
+    (r) => r.kind !== "order_intent",
+  );
 
   return (
     <main className="flex-1 py-12">
@@ -139,6 +162,51 @@ export default async function AccountPage() {
           Every part is covered: fits or refunded, and exchanged if it fails
           through a fault of ours — write to us with your order date.
         </div>
+
+        {/* parts this account has asked for / backed in the resurrection queue */}
+        <div className="label-mono mt-14 mb-4 flex items-center gap-3.5 text-ink-soft after:h-px after:flex-1 after:bg-hairline after:content-['']">
+          Requests &amp; votes
+        </div>
+        {requests.length === 0 ? (
+          <div className="border border-dashed border-ink-soft/65 px-6 py-8 text-center">
+            <p className="text-ink-soft">
+              You haven&apos;t backed a part yet. Can&apos;t find yours?
+            </p>
+            <a
+              href="/#queue"
+              className="label-mono mt-3 inline-block border border-hairline px-5 py-3 text-ink-soft transition-colors hover:border-brg hover:text-brg"
+            >
+              Add it to the queue →
+            </a>
+          </div>
+        ) : (
+          <ul className="border-t border-hairline">
+            {requests.map((r) => (
+              <li
+                key={r.id}
+                className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline py-3.5"
+              >
+                <div>
+                  <div className="text-[0.95rem]">{r.part_label}</div>
+                  {(r.make || r.model) && (
+                    <div className="label-mono !text-[0.62rem] text-ink-soft">
+                      {[r.make, r.model].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
+                </div>
+                <span
+                  className={`label-mono border px-2 py-[2px] !text-[0.6rem] ${
+                    r.notified_at
+                      ? "border-brass text-brass"
+                      : "border-hairline text-ink-soft"
+                  }`}
+                >
+                  {r.notified_at ? "Revived — notified" : "In the queue"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </main>
   );

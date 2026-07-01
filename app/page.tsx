@@ -1,6 +1,6 @@
 import SectionRail from "@/components/SectionRail";
 import Hero from "@/components/Hero";
-import Ticker from "@/components/Ticker";
+import Ticker, { type TickerItem } from "@/components/Ticker";
 import Registry from "@/components/Registry";
 import Proof from "@/components/Proof";
 import Process from "@/components/Process";
@@ -36,13 +36,26 @@ export default async function Home() {
     )
     .slice(0, 4);
 
+  // marquee on real data: revived parts (their primary ref) + the most-wanted
+  // parts from the live queue. No hardcoded/stale references.
+  const tickerItems: TickerItem[] = [
+    ...latest.map((p): TickerItem => ({
+      text: optionRefs(p)[0] ?? p.evo_no,
+      status: "Revived",
+    })),
+    ...board.slice(0, 3).map((b): TickerItem => ({
+      text: b.label,
+      status: "In queue",
+    })),
+  ];
+
   return (
     <>
       <SectionRail />
       <main>
         <Hero searchRefs={searchRefs} stats={stats} />
         <Registry products={latest} />
-        <Ticker />
+        <Ticker items={tickerItems} />
         <Proof />
         <Process />
         <Queue board={board} isAuthed={!!user} votedKeys={votedKeys} />
