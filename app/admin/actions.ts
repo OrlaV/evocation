@@ -15,6 +15,7 @@ import {
 import { getStripe } from "@/lib/stripe";
 import { SITE_URL } from "@/lib/site";
 import type { Settings } from "@/lib/settings";
+import { QUEUE_STAGES, type QueueStage } from "@/lib/queue-stages";
 
 export type ProductPayload = {
   id?: string;
@@ -42,7 +43,13 @@ export type ProductPayload = {
   faq: FaqItem[];
 };
 
-export async function saveProductAction(payload: ProductPayload) {
+export type SaveProductResult =
+  | { ok: true; id: string; notice?: string }
+  | { ok: false; error: string };
+
+export async function saveProductAction(
+  payload: ProductPayload,
+): Promise<SaveProductResult> {
   await requireAdmin();
 
   if (!payload.name.trim() || !payload.slug.trim() || !payload.evo_no.trim()) {
@@ -90,6 +97,20 @@ export async function saveProductAction(payload: ProductPayload) {
     }),
   };
 
+  // previous state drives the publish-time auto-notification: only the
+  // draft→published transition of a never-notified part triggers emails.
+  let wasPublished = false;
+  let alreadyNotified = false;
+  if (id) {
+    const { data: prev } = await supabase
+      .from("products")
+      .select("status, revival_notified_at")
+      .eq("id", id)
+      .maybeSingle();
+    wasPublished = prev?.status === "published";
+    alreadyNotified = Boolean(prev?.revival_notified_at);
+  }
+
   const query = id
     ? supabase.from("products").update(row).eq("id", id).select("id, slug").single()
     : supabase.from("products").insert(row).select("id, slug").single();
@@ -111,7 +132,39 @@ export async function saveProductAction(payload: ProductPayload) {
   revalidatePath("/shop");
   revalidatePath(`/parts/${data.slug}`);
 
-  return { ok: true as const, id: data.id as string };
+  // ---- automatic revival notification on first publish ----
+  // Claim the flag BEFORE sending so a double-save can never double-mail the
+  // garage list (queue rows have their own notified_at guard, garages don't).
+  // The manual "Notify interested owners" button remains for retries.
+  let notice: string | undefined;
+  if (row.status === "published" && !wasPublished && !alreadyNotified) {
+    if (!emailConfigured()) {
+      notice =
+        "Published. Auto-notification skipped — email isn't configured (set RESEND_API_KEY / RESEND_FROM), use the notify button later.";
+    } else {
+      await supabase
+        .from("products")
+        .update({ revival_notified_at: new Date().toISOString() })
+        .eq("id", data.id);
+      const res = await sendRevivalNotifications(data.id as string);
+      if ("error" in res) {
+        // release the claim so fixing the cause (e.g. missing fitment) and
+        // re-publishing retries the batch
+        await supabase
+          .from("products")
+          .update({ revival_notified_at: null })
+          .eq("id", data.id);
+      }
+      notice =
+        "error" in res
+          ? `Published, but auto-notification failed: ${res.error}`
+          : res.total + res.garageSent === 0
+            ? "Published. No one was waiting for this part yet."
+            : `Published — notified ${res.sent}/${res.total} from the queue + ${res.garageSent} garage owner${res.garageSent === 1 ? "" : "s"}.`;
+    }
+  }
+
+  return { ok: true as const, id: data.id as string, notice };
 }
 
 /* Save adjustable business settings (shipping rates, slot thresholds…). */
@@ -140,6 +193,16 @@ export async function saveSettingsAction(payload: Settings) {
         };
       }
     }
+  }
+
+  if (
+    !Number.isFinite(payload.queueVoteTarget) ||
+    payload.queueVoteTarget < 1
+  ) {
+    return {
+      ok: false as const,
+      error: "The queue vote target must be at least 1.",
+    };
   }
 
   const supabase = createServiceClient();
@@ -175,6 +238,26 @@ export async function deleteProductAction(id: string) {
    Marks notified_at so no one is mailed twice. */
 export async function notifyWaitingAction(productId: string) {
   await requireAdmin();
+  if (!emailConfigured()) {
+    return {
+      ok: false as const,
+      error:
+        "Resend isn't set up yet — add RESEND_FROM and verify the domain to send.",
+    };
+  }
+  const res = await sendRevivalNotifications(productId);
+  if ("error" in res) return { ok: false as const, error: res.error };
+  revalidatePath(`/admin/parts/${productId}`);
+  return { ok: true as const, ...res };
+}
+
+/* Shared core of the revival announcement: queue requesters (guarded by
+   notified_at) + opted-in garage owners whose saved car matches the part's
+   fitment. Called by the manual button above AND automatically the first time
+   a part is published (saveProductAction). Not an action — service role. */
+async function sendRevivalNotifications(
+  productId: string,
+): Promise<{ sent: number; total: number; garageSent: number } | { error: string }> {
   const supabase = createServiceClient();
 
   const { data: product, error: pErr } = await supabase
@@ -183,7 +266,7 @@ export async function notifyWaitingAction(productId: string) {
     .eq("id", productId)
     .maybeSingle();
   if (pErr || !product) {
-    return { ok: false as const, error: "Product not found." };
+    return { error: "Product not found." };
   }
 
   const keys = (((product.fitment_keys as string[] | null) ?? []) as string[]).filter(
@@ -191,7 +274,6 @@ export async function notifyWaitingAction(productId: string) {
   );
   if (keys.length === 0) {
     return {
-      ok: false as const,
       error: "No recognised make/model on this part yet — add fitment first.",
     };
   }
@@ -244,17 +326,8 @@ export async function notifyWaitingAction(productId: string) {
     }
   }
 
-  const total = list.length + garageRecipients.length;
-  if (total === 0) {
-    return { ok: true as const, sent: 0, total: 0, garageSent: 0 };
-  }
-  if (!emailConfigured()) {
-    return {
-      ok: false as const,
-      error: `Resend isn't set up yet — ${total} ${
-        total === 1 ? "person is" : "people are"
-      } waiting (queue + garage). Add RESEND_FROM and verify the domain to send.`,
-    };
+  if (list.length + garageRecipients.length === 0) {
+    return { sent: 0, total: 0, garageSent: 0 };
   }
 
   const subject = `${product.name} is back in the registry`;
@@ -284,8 +357,7 @@ export async function notifyWaitingAction(productId: string) {
     if (res.ok) garageSent++;
   }
 
-  revalidatePath(`/admin/parts/${productId}`);
-  return { ok: true as const, sent: sentIds.length, total: list.length, garageSent };
+  return { sent: sentIds.length, total: list.length, garageSent };
 }
 
 function notifyHtml(
@@ -590,6 +662,157 @@ export async function updateReturnAction(input: {
   if (error) return { ok: false, msg: error.message };
   revalidatePath("/admin/returns");
   revalidatePath("/account");
+  return { ok: true, msg: "Saved." };
+}
+
+/* ---------- promo codes (/admin/coupons) ---------- */
+
+/* The checkout already accepts promotion codes natively (allow_promotion_codes
+   on the Stripe session), so codes are Stripe objects: a Coupon (the discount)
+   wrapped in a Promotion Code (the customer-facing string). These actions
+   manage them from our admin instead of the Stripe dashboard — validation,
+   usage counting and expiry all stay Stripe's job. */
+
+export type PromoActionResult =
+  | { ok: true; msg: string }
+  | { ok: false; error: string };
+
+export async function createPromoCodeAction(input: {
+  code: string;
+  kind: "percent" | "amount";
+  value: number;
+  maxRedemptions?: number;
+  expiresAt?: string; // yyyy-mm-dd
+  minimumPounds?: number;
+}): Promise<PromoActionResult> {
+  await requireAdmin();
+  const stripe = getStripe();
+  if (!stripe) return { ok: false, error: "Stripe isn't configured." };
+
+  const code = (input.code ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  // Stripe promotion codes allow letters, digits and dashes only
+  if (!/^[A-Z0-9-]{3,32}$/.test(code)) {
+    return {
+      ok: false,
+      error: "Code must be 3–32 characters (letters, numbers or dashes).",
+    };
+  }
+  const value = Number(input.value);
+  if (input.kind === "percent" && !(value >= 1 && value <= 100)) {
+    return { ok: false, error: "Percentage must be between 1 and 100." };
+  }
+  if (input.kind === "amount" && !(value > 0)) {
+    return { ok: false, error: "Amount off must be above £0." };
+  }
+  const expiresAt = input.expiresAt
+    ? Math.floor(new Date(`${input.expiresAt}T23:59:59Z`).getTime() / 1000)
+    : undefined;
+  if (expiresAt !== undefined && !(expiresAt > Date.now() / 1000)) {
+    return { ok: false, error: "Expiry must be in the future." };
+  }
+
+  try {
+    const coupon = await stripe.coupons.create({
+      name: code,
+      duration: "once",
+      ...(input.kind === "percent"
+        ? { percent_off: value }
+        : { amount_off: Math.round(value * 100), currency: "gbp" }),
+    });
+    await stripe.promotionCodes.create({
+      promotion: { type: "coupon", coupon: coupon.id },
+      code,
+      ...(input.maxRedemptions && input.maxRedemptions > 0
+        ? { max_redemptions: Math.round(input.maxRedemptions) }
+        : {}),
+      ...(expiresAt ? { expires_at: expiresAt } : {}),
+      ...(input.minimumPounds && input.minimumPounds > 0
+        ? {
+            restrictions: {
+              minimum_amount: Math.round(input.minimumPounds * 100),
+              minimum_amount_currency: "gbp",
+            },
+          }
+        : {}),
+    });
+  } catch (e) {
+    const msg = (e as Error).message;
+    return {
+      ok: false,
+      error: msg.includes("already exists")
+        ? `The code ${code} already exists (deactivate the old one first).`
+        : `Stripe: ${msg}`,
+    };
+  }
+
+  revalidatePath("/admin/coupons");
+  return { ok: true, msg: `${code} is live — it works at checkout right now.` };
+}
+
+// Deactivate / reactivate a promotion code (Stripe never deletes them).
+export async function setPromoActiveAction(input: {
+  id: string;
+  active: boolean;
+}): Promise<PromoActionResult> {
+  await requireAdmin();
+  const stripe = getStripe();
+  if (!stripe) return { ok: false, error: "Stripe isn't configured." };
+  try {
+    await stripe.promotionCodes.update(input.id, { active: input.active });
+  } catch (e) {
+    return { ok: false, error: `Stripe: ${(e as Error).message}` };
+  }
+  revalidatePath("/admin/coupons");
+  return { ok: true, msg: input.active ? "Reactivated." : "Deactivated." };
+}
+
+/* ---------- resurrection queue stages (/admin/queue) ---------- */
+
+// Set the workshop stage shown on the public board for one queue item.
+export async function setQueueStageAction(input: {
+  requestKey: string;
+  stage: string;
+}): Promise<OrderActionResult> {
+  await requireAdmin();
+  const key = (input.requestKey ?? "").trim().slice(0, 300);
+  if (!key || !QUEUE_STAGES.includes(input.stage as QueueStage)) {
+    return { ok: false, msg: "Invalid stage." };
+  }
+  const svc = createServiceClient();
+  const { error } = await svc.from("queue_stages").upsert({
+    request_key: key,
+    stage: input.stage,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, msg: error.message };
+  revalidatePath("/");
+  revalidatePath("/requests");
+  revalidatePath("/admin/queue");
+  return { ok: true, msg: "Stage saved." };
+}
+
+/* ---------- donor offers (/admin/donors) ---------- */
+
+const DONOR_STATUSES = ["new", "accepted", "received", "returned", "declined"];
+
+// Move a donor offer through the workshop. 'received'/'returned' offers
+// appear on the public donor wall (/donors).
+export async function updateDonorStatusAction(input: {
+  id: string;
+  status: string;
+}): Promise<OrderActionResult> {
+  await requireAdmin();
+  if (!DONOR_STATUSES.includes(input.status)) {
+    return { ok: false, msg: "Invalid status." };
+  }
+  const svc = createServiceClient();
+  const { error } = await svc
+    .from("donor_offers")
+    .update({ status: input.status })
+    .eq("id", input.id);
+  if (error) return { ok: false, msg: error.message };
+  revalidatePath("/admin/donors");
+  revalidatePath("/donors");
   return { ok: true, msg: "Saved." };
 }
 

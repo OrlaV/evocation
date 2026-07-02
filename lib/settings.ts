@@ -8,11 +8,15 @@ import { DEFAULT_SHIPPING, DEFAULT_SLOTS, type ShippingSettings } from "./shippi
 export type Settings = {
   shipping: ShippingSettings;
   defaultSlots: number;
+  /* votes a queue item needs before we commit to reviving it — drives the
+     public progress bar on the resurrection queue */
+  queueVoteTarget: number;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
   shipping: DEFAULT_SHIPPING,
   defaultSlots: DEFAULT_SLOTS,
+  queueVoteTarget: 25,
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -34,6 +38,10 @@ export async function getSettings(): Promise<Settings> {
         typeof v.defaultSlots === "number" && v.defaultSlots > 0
           ? v.defaultSlots
           : DEFAULT_SLOTS,
+      queueVoteTarget:
+        typeof v.queueVoteTarget === "number" && v.queueVoteTarget > 0
+          ? Math.round(v.queueVoteTarget)
+          : DEFAULT_SETTINGS.queueVoteTarget,
     };
   } catch {
     return DEFAULT_SETTINGS;

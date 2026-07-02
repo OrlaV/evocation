@@ -17,6 +17,7 @@ const COLUMNS = [
     links: [
       { label: "The Process", href: "/process" },
       { label: "About", href: "/about" },
+      { label: "The donor wall", href: "/donors" },
       { label: "Contact", href: "/contact" },
     ],
   },

@@ -174,7 +174,7 @@ export default function ProductEditor({
       setMsg(res.error);
       return;
     }
-    setMsg("Saved.");
+    setMsg(res.notice ?? "Saved.");
     setDirty(false);
     if (!form.id) {
       router.replace(`/admin/parts/${res.id}`);

@@ -1,13 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { QueueBoardItem } from "@/lib/queue";
+import { STAGE_LABELS, type QueueBoardItem } from "@/lib/queue-stages";
 
 /* Public, searchable view of the resurrection queue so visitors can check
    whether their part is already requested (fewer duplicates) and see demand
    (social proof). Voting/requesting still happens on the home queue, which
    requires an account. */
-export default function RequestsBoard({ items }: { items: QueueBoardItem[] }) {
+export default function RequestsBoard({
+  items,
+  voteTarget = 25,
+}: {
+  items: QueueBoardItem[];
+  voteTarget?: number;
+}) {
   const [q, setQ] = useState("");
 
   const visible = useMemo(() => {
@@ -50,29 +56,49 @@ export default function RequestsBoard({ items }: { items: QueueBoardItem[] }) {
       ) : (
         <ul className="border-t border-hairline">
           {visible.map((it, i) => (
-            <li
-              key={it.key}
-              className="flex items-center justify-between gap-4 border-b border-hairline py-4"
-            >
-              <div className="flex items-baseline gap-3">
-                <span className="font-num text-[1.1rem] text-ink-soft/60">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <div className="text-[1rem]">{it.label}</div>
-                  {it.vehicle && (
-                    <div className="label-mono !text-[0.62rem] text-ink-soft">
-                      {it.vehicle}
+            <li key={it.key} className="border-b border-hairline py-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-baseline gap-3">
+                  <span className="font-num text-[1.1rem] text-ink-soft/60">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div>
+                    <div className="text-[1rem]">
+                      {it.label}
+                      {it.stage !== "queued" && (
+                        <span className="ml-2.5 inline-block translate-y-[-1px] border border-brg px-[7px] py-0.5 font-mono text-[0.6rem] tracking-[0.12em] text-brg">
+                          {STAGE_LABELS[it.stage].toUpperCase()}
+                        </span>
+                      )}
                     </div>
-                  )}
+                    {it.vehicle && (
+                      <div className="label-mono !text-[0.62rem] text-ink-soft">
+                        {it.vehicle}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 whitespace-nowrap">
+                  <span className="font-num text-[1.2rem] text-brg">{it.count}</span>
+                  <span className="label-mono !text-[0.58rem] text-ink-soft">
+                    {it.stage !== "queued"
+                      ? it.count === 1
+                        ? "backer"
+                        : "backers"
+                      : `/ ${voteTarget} votes`}
+                  </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="font-num text-[1.2rem] text-brg">{it.count}</span>
-                <span className="label-mono !text-[0.58rem] text-ink-soft">
-                  {it.count === 1 ? "backer" : "backers"}
-                </span>
-              </div>
+              {it.stage === "queued" && (
+                <div className="mt-2.5 ml-[38px] h-[3px] bg-ink-soft/15">
+                  <div
+                    className="h-full bg-brg"
+                    style={{
+                      width: `${Math.min(100, Math.round((it.count / Math.max(1, voteTarget)) * 100))}%`,
+                    }}
+                  />
+                </div>
+              )}
             </li>
           ))}
         </ul>

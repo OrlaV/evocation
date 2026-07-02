@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/admin-auth";
 import { createServiceClient } from "@/lib/supabase-server";
+import { QUEUE_STAGES, type QueueStage } from "@/lib/queue-stages";
+import QueueStageSelect from "@/components/admin/QueueStageSelect";
 
 export const metadata: Metadata = {
   title: "Resurrection queue — Evocation admin",
@@ -8,6 +10,7 @@ export const metadata: Metadata = {
 };
 
 type Row = {
+  request_key: string | null;
   part_label: string;
   ref_normalized: string | null;
   make: string | null;
@@ -17,6 +20,7 @@ type Row = {
 };
 
 type Group = {
+  key: string;
   label: string;
   ref: string | null;
   vehicle: string | null;
@@ -35,14 +39,17 @@ export default async function AdminQueuePage() {
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("queue_requests")
-    .select("part_label, ref_normalized, make, model, email, created_at")
+    .select("request_key, part_label, ref_normalized, make, model, email, created_at")
     .neq("kind", "order_intent")
     .order("created_at", { ascending: false });
   const rows = (data as Row[]) ?? [];
 
+  // group by request_key — the SAME key the public board and the stage
+  // control use, so the select below always targets the right item
   const groups = new Map<string, Group>();
   for (const r of rows) {
-    const key = r.ref_normalized ?? r.part_label.trim().toLowerCase();
+    const key =
+      r.request_key ?? r.ref_normalized ?? r.part_label.trim().toLowerCase();
     const g = groups.get(key);
     if (g) {
       g.emails.add(r.email.toLowerCase());
@@ -51,6 +58,7 @@ export default async function AdminQueuePage() {
       if (r.created_at > g.latest) g.latest = r.created_at;
     } else {
       groups.set(key, {
+        key,
         label: r.part_label,
         ref: r.ref_normalized,
         vehicle: vehicleLabel(r),
@@ -63,6 +71,17 @@ export default async function AdminQueuePage() {
   const sorted = [...groups.values()].sort(
     (a, b) => b.emails.size - a.emails.size || (a.latest < b.latest ? 1 : -1),
   );
+
+  // admin-set workshop stages for these items
+  const stages = new Map<string, QueueStage>();
+  const { data: stageRows } = await supabase
+    .from("queue_stages")
+    .select("request_key, stage");
+  for (const s of stageRows ?? []) {
+    if ((QUEUE_STAGES as readonly string[]).includes(s.stage as string)) {
+      stages.set(s.request_key as string, s.stage as QueueStage);
+    }
+  }
 
   return (
     <main className="flex-1 py-12">
@@ -97,7 +116,7 @@ export default async function AdminQueuePage() {
           <table className="mt-8 w-full border-collapse border-t border-hairline">
             <thead>
               <tr>
-                {["Part requested", "Vehicle", "Ref.", "Waiting", "Requests", "Last request"].map(
+                {["Part requested", "Vehicle", "Ref.", "Waiting", "Requests", "Last request", "Stage"].map(
                   (h) => (
                     <th
                       key={h}
@@ -110,8 +129,8 @@ export default async function AdminQueuePage() {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((g, i) => (
-                <tr key={i}>
+              {sorted.map((g) => (
+                <tr key={g.key}>
                   <td className="border-b border-hairline py-3.5 pr-3 text-[0.95rem] font-medium">
                     {g.label}
                   </td>
@@ -127,8 +146,14 @@ export default async function AdminQueuePage() {
                   <td className="border-b border-hairline py-3.5 pr-3 font-mono text-[0.8rem] text-ink-soft">
                     {g.requests}
                   </td>
-                  <td className="border-b border-hairline py-3.5 font-mono text-[0.78rem] text-ink-soft">
+                  <td className="border-b border-hairline py-3.5 pr-3 font-mono text-[0.78rem] text-ink-soft">
                     {new Date(g.latest).toLocaleDateString("en-GB")}
+                  </td>
+                  <td className="border-b border-hairline py-3.5">
+                    <QueueStageSelect
+                      requestKey={g.key}
+                      stage={stages.get(g.key) ?? "queued"}
+                    />
                   </td>
                 </tr>
               ))}
@@ -137,8 +162,9 @@ export default async function AdminQueuePage() {
         )}
 
         <p className="label-mono mt-6 !text-[0.66rem] !tracking-[0.1em] text-ink-soft/80">
-          Waiting = distinct emails per part. When a part ships, export the
-          emails from Supabase to announce the revival.
+          Waiting = distinct emails per part. Publishing a part now emails
+          everyone waiting for a matching vehicle automatically; the stage
+          column drives the progress shown on the public board.
         </p>
       </div>
     </main>

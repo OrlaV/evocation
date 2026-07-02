@@ -203,6 +203,30 @@ export default function SettingsEditor({ settings }: { settings: Settings }) {
         />
       </label>
 
+      <SectionTitle>Resurrection queue</SectionTitle>
+      <label className="block max-w-[240px]">
+        <span className="label-mono mb-1 block !text-[0.6rem] text-ink-soft">
+          Votes to trigger a revival
+        </span>
+        <input
+          type="number"
+          min={1}
+          className={inputCls}
+          value={form.queueVoteTarget}
+          onChange={(e) =>
+            update({
+              ...form,
+              queueVoteTarget: parseInt(e.target.value, 10) || 1,
+            })
+          }
+        />
+      </label>
+      <p className="mt-2 max-w-[60ch] font-mono text-[0.72rem] leading-[1.5] text-ink-soft/75">
+        Drives the public progress bar on the queue (&ldquo;N / target
+        votes&rdquo;). Purely a display target — you decide when work actually
+        starts via the Stage column on the queue page.
+      </p>
+
       <div className="mt-8 flex items-center gap-4">
         <button
           type="button"

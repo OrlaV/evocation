@@ -1,4 +1,5 @@
 import { getQueueBoard } from "@/lib/queue";
+import { getSettings } from "@/lib/settings";
 import RequestsBoard from "@/components/RequestsBoard";
 import Reveal from "@/components/Reveal";
 import SectionNo from "@/components/SectionNo";
@@ -14,7 +15,10 @@ export const metadata = pageMeta({
 });
 
 export default async function RequestsPage() {
-  const board = await getQueueBoard(200);
+  const [board, settings] = await Promise.all([
+    getQueueBoard(200),
+    getSettings(),
+  ]);
 
   return (
     <main className="relative overflow-hidden py-[clamp(56px,8vh,100px)]">
@@ -33,7 +37,7 @@ export default async function RequestsPage() {
           </Reveal>
         </div>
 
-        <RequestsBoard items={board} />
+        <RequestsBoard items={board} voteTarget={settings.queueVoteTarget} />
 
         <Reveal delay={0.1} className="mt-[clamp(24px,3vw,44px)]">
           <a

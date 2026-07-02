@@ -8,7 +8,7 @@ import SectionNo from "./SectionNo";
 import GhostNumeral from "./GhostNumeral";
 import { VEHICLES, modelsForMake } from "@/lib/vehicles";
 import { requestPart, votePart, donatePart } from "@/lib/queue-actions";
-import type { QueueBoardItem } from "@/lib/queue";
+import { STAGE_LABELS, type QueueBoardItem } from "@/lib/queue-stages";
 
 // native <option> list themed dark to match the band
 const OPT = { background: "#23272b", color: "#ecedee" };
@@ -187,6 +187,8 @@ function DonorForm() {
   const [part, setPart] = useState("");
   const [condition, setCondition] = useState("");
   const [notes, setNotes] = useState("");
+  const [credit, setCredit] = useState(false);
+  const [publicName, setPublicName] = useState("");
   const [state, setState] = useState<FormState>("idle");
   const [pending, start] = useTransition();
 
@@ -194,12 +196,22 @@ function DonorForm() {
     e.preventDefault();
     setState("sending");
     start(async () => {
-      const res = await donatePart({ make, model, part, condition, notes });
+      const res = await donatePart({
+        make,
+        model,
+        part,
+        condition,
+        notes,
+        displayConsent: credit,
+        publicName: credit ? publicName : "",
+      });
       setState(res.ok ? "ok" : "error");
       if (res.ok) {
         setPart("");
         setNotes("");
         setCondition("");
+        setCredit(false);
+        setPublicName("");
       }
     });
   };
@@ -266,6 +278,27 @@ function DonorForm() {
         rows={2}
         className={`${fieldCls} mb-2.5 resize-none`}
       />
+      {/* donor wall credit — strictly opt-in, anonymous by default */}
+      <label className="mb-2.5 flex cursor-pointer items-center gap-2.5 text-[0.85rem] text-cream/80">
+        <input
+          type="checkbox"
+          checked={credit}
+          onChange={(e) => setCredit(e.target.checked)}
+          className="h-4 w-4 accent-[var(--gold)]"
+        />
+        Credit me by name on the public donor wall
+      </label>
+      {credit && (
+        <input
+          type="text"
+          required
+          value={publicName}
+          onChange={(e) => setPublicName(e.target.value)}
+          placeholder="Name to display (e.g. first name + county)"
+          aria-label="Name to display on the donor wall"
+          className={`${fieldCls} mb-2.5`}
+        />
+      )}
       <button
         type="submit"
         disabled={pending}
@@ -285,12 +318,14 @@ function BoardRow({
   isAuthed,
   voted,
   onVoted,
+  voteTarget,
 }: {
   item: QueueBoardItem;
   index: number;
   isAuthed: boolean;
   voted: boolean;
   onVoted: (key: string) => void;
+  voteTarget: number;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -322,6 +357,11 @@ function BoardRow({
     });
   };
 
+  // in-progress stages replace the vote meter: work has started, the target
+  // is no longer the story. 'queued' items race toward the vote target.
+  const inWorkshop = item.stage !== "queued";
+  const pct = Math.min(100, Math.round((count / Math.max(1, voteTarget)) * 100));
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -330,14 +370,21 @@ function BoardRow({
       transition={{ duration: 0.6, delay: 0.15 + index * 0.08, ease: EASE }}
       className="border-b border-hairline-dark"
     >
-      <div className="flex items-baseline gap-3 px-0.5 py-[15px]">
+      <div className="flex items-baseline gap-3 px-0.5 pt-[15px] pb-2.5">
         <div className="min-w-0">
           <div className="font-display text-[1rem] font-bold">
             {item.label}
-            {index === 0 && count > 0 && (
-              <span className="ml-2.5 inline-block translate-y-[-2px] bg-gold px-[7px] py-0.5 font-mono text-[0.62rem] tracking-[0.12em] text-ink">
-                MOST WANTED
+            {inWorkshop ? (
+              <span className="ml-2.5 inline-block translate-y-[-2px] border border-gold px-[7px] py-0.5 font-mono text-[0.62rem] tracking-[0.12em] text-gold">
+                {STAGE_LABELS[item.stage].toUpperCase()}
               </span>
+            ) : (
+              index === 0 &&
+              count > 0 && (
+                <span className="ml-2.5 inline-block translate-y-[-2px] bg-gold px-[7px] py-0.5 font-mono text-[0.62rem] tracking-[0.12em] text-ink">
+                  MOST WANTED
+                </span>
+              )
             )}
           </div>
           {item.vehicle && (
@@ -352,7 +399,7 @@ function BoardRow({
         />
         <div className="flex shrink-0 items-baseline gap-3 whitespace-nowrap">
           <span className="font-mono text-[0.74rem] tracking-[0.1em] text-gold">
-            {count} waiting
+            {inWorkshop ? `${count} waiting` : `${count} / ${voteTarget} votes`}
           </span>
           <button
             type="button"
@@ -368,6 +415,19 @@ function BoardRow({
           </button>
         </div>
       </div>
+      {/* progress toward the vote target that triggers the scan */}
+      {!inWorkshop && (
+        <div className="mb-[15px] h-[3px] w-full bg-cream/15">
+          <motion.div
+            initial={{ scaleX: 0 }}
+            whileInView={{ scaleX: 1 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.9, delay: 0.3 + index * 0.08, ease: EASE }}
+            className="h-full origin-left bg-gold"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -377,10 +437,12 @@ export default function Queue({
   board,
   isAuthed,
   votedKeys,
+  voteTarget = 25,
 }: {
   board: QueueBoardItem[];
   isAuthed: boolean;
   votedKeys: string[];
+  voteTarget?: number;
 }) {
   const [tab, setTab] = useState<"request" | "donor">("request");
   const [prefill, setPrefill] = useState("");
@@ -498,6 +560,7 @@ export default function Queue({
                     isAuthed={isAuthed}
                     voted={voted.current.has(item.key)}
                     onVoted={(k) => voted.current.add(k)}
+                    voteTarget={voteTarget}
                   />
                 ))}
               </div>

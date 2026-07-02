@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/admin-auth";
 import { createServiceClient } from "@/lib/supabase-server";
+import DonorStatusSelect from "@/components/admin/DonorStatusSelect";
 
 export const metadata: Metadata = {
   title: "Donor offers — Evocation admin",
@@ -18,14 +19,8 @@ type DonorRow = {
   notes: string | null;
   status: string;
   created_at: string;
-};
-
-const STATUS_STYLE: Record<string, string> = {
-  new: "border-brg text-brg",
-  accepted: "border-gold text-gold",
-  received: "border-ink text-ink",
-  returned: "border-ink-soft text-ink-soft",
-  declined: "border-ink-soft text-ink-soft line-through",
+  public_name: string | null;
+  display_consent: boolean;
 };
 
 export default async function AdminDonorsPage() {
@@ -34,7 +29,7 @@ export default async function AdminDonorsPage() {
   const { data } = await supabase
     .from("donor_offers")
     .select(
-      "id, email, make, model, part_label, ref_normalized, condition, notes, status, created_at",
+      "id, email, make, model, part_label, ref_normalized, condition, notes, status, created_at, public_name, display_consent",
     )
     .order("created_at", { ascending: false });
   const rows = (data as DonorRow[]) ?? [];
@@ -78,6 +73,7 @@ export default async function AdminDonorsPage() {
                   "Ref.",
                   "Condition",
                   "Contact",
+                  "Wall credit",
                   "Status",
                   "Received",
                 ].map((h) => (
@@ -113,14 +109,15 @@ export default async function AdminDonorsPage() {
                   <td className="border-b border-hairline py-3.5 pr-3 font-mono text-[0.78rem] text-ink-soft">
                     {r.email}
                   </td>
+                  <td className="border-b border-hairline py-3.5 pr-3 text-[0.82rem]">
+                    {r.display_consent && r.public_name ? (
+                      <span className="text-ink">{r.public_name}</span>
+                    ) : (
+                      <span className="text-ink-soft/70">anonymous</span>
+                    )}
+                  </td>
                   <td className="border-b border-hairline py-3.5 pr-3">
-                    <span
-                      className={`label-mono border px-2 py-[2px] !text-[0.62rem] ${
-                        STATUS_STYLE[r.status] ?? "border-ink-soft text-ink-soft"
-                      }`}
-                    >
-                      {r.status}
-                    </span>
+                    <DonorStatusSelect id={r.id} status={r.status} />
                   </td>
                   <td className="border-b border-hairline py-3.5 font-mono text-[0.78rem] text-ink-soft">
                     {new Date(r.created_at).toLocaleDateString("en-GB")}
@@ -133,8 +130,9 @@ export default async function AdminDonorsPage() {
 
         <p className="label-mono mt-6 !text-[0.66rem] !tracking-[0.1em] text-ink-soft/80">
           The deal: owner sends the original → we 3D-scan & inspect → we return
-          their part plus a free printed copy. Update the status column in
-          Supabase as each offer moves through the workshop.
+          their part plus a free printed copy. Offers marked received or
+          returned appear on the public donor wall (/donors) — named only when
+          the donor opted in.
         </p>
       </div>
     </main>

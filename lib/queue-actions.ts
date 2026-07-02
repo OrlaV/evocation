@@ -94,11 +94,18 @@ export async function donatePart(input: {
   part?: string;
   condition?: string;
   notes?: string;
+  /* donor wall consent — OPT IN: only when the donor ticks the box do we
+     store a display name; the default is an anonymous credit. */
+  displayConsent?: boolean;
+  publicName?: string;
 }): Promise<ActionResult> {
   const { supabase, user } = await sessionUser();
   if (!user?.email) return { ok: false, error: "auth" };
   const part = clean(input.part, 200);
   if (!part) return { ok: false, error: "invalid" };
+
+  const publicName = clean(input.publicName, 80);
+  const displayConsent = input.displayConsent === true && Boolean(publicName);
 
   const { error } = await supabase.from("donor_offers").insert({
     part_label: part,
@@ -109,6 +116,8 @@ export async function donatePart(input: {
     notes: clean(input.notes, 1000) || null,
     email: user.email,
     user_id: user.id,
+    display_consent: displayConsent,
+    public_name: displayConsent ? publicName : null,
   });
   if (error) {
     console.error("donatePart:", error.message);

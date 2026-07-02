@@ -7,12 +7,14 @@ import { createServiceClient } from "./supabase-server";
    for legacy anonymous rows). Aggregated server-side via the service role so
    no raw emails reach the client and no public read policy is needed. */
 
-export type QueueBoardItem = {
-  key: string;
-  label: string;
-  vehicle: string | null;
-  count: number;
-};
+import { QUEUE_STAGES, type QueueStage, type QueueBoardItem } from "./queue-stages";
+
+export {
+  QUEUE_STAGES,
+  STAGE_LABELS,
+  type QueueStage,
+  type QueueBoardItem,
+} from "./queue-stages";
 
 type Row = {
   request_key: string | null;
@@ -73,7 +75,7 @@ export async function getQueueBoard(limit = 6): Promise<QueueBoardItem[]> {
     if (r.created_at > g.latest) g.latest = r.created_at;
   }
 
-  return [...groups.values()]
+  const top = [...groups.values()]
     .map((g) => ({
       key: g.key,
       // most frequently typed label for the part
@@ -84,8 +86,29 @@ export async function getQueueBoard(limit = 6): Promise<QueueBoardItem[]> {
       latest: g.latest,
     }))
     .sort((a, b) => b.count - a.count || (a.latest < b.latest ? 1 : -1))
-    .slice(0, limit)
-    .map(({ key, label, vehicle, count }) => ({ key, label, vehicle, count }));
+    .slice(0, limit);
+
+  // attach the admin-set workshop stage (default 'queued')
+  const stages = new Map<string, QueueStage>();
+  if (top.length) {
+    const { data: stageRows } = await supabase
+      .from("queue_stages")
+      .select("request_key, stage")
+      .in("request_key", top.map((t) => t.key));
+    for (const s of stageRows ?? []) {
+      if ((QUEUE_STAGES as readonly string[]).includes(s.stage as string)) {
+        stages.set(s.request_key as string, s.stage as QueueStage);
+      }
+    }
+  }
+
+  return top.map(({ key, label, vehicle, count }) => ({
+    key,
+    label,
+    vehicle,
+    count,
+    stage: stages.get(key) ?? "queued",
+  }));
 }
 
 /* request_keys the given user has already backed — drives the "Voted" state. */
