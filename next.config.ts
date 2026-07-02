@@ -30,6 +30,13 @@ const supabaseHost = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Le projet vit sur un HDD (D:, Seagate SMR) : le cache disque Turbopack
+    // (activé par défaut depuis Next 16.1) y écrit des Go de petits fichiers
+    // et sature le disque au point de geler la machine. À retirer si le
+    // projet est déplacé sur un SSD.
+    turbopackFileSystemCacheForDev: false,
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
