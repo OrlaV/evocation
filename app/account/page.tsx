@@ -101,7 +101,7 @@ export default async function AccountPage() {
           <div className="flex items-center gap-3">
             <a
               href="/account/profile"
-              className="label-mono border border-hairline px-4 py-3 text-ink-soft transition-colors hover:border-ink hover:text-ink"
+              className="label-mono border border-transparent bg-brg px-4 py-3 text-cream transition-colors hover:bg-brg-deep"
             >
               Profile &amp; address →
             </a>
@@ -278,6 +278,29 @@ export default async function AccountPage() {
             ))}
           </ul>
         )}
+
+        {/* profile — a full-width entry in the page flow, so it's findable by
+            scrolling too, not only via the header shortcut */}
+        <div className="label-mono mt-14 mb-4 flex items-center gap-3.5 text-ink-soft after:h-px after:flex-1 after:bg-hairline after:content-['']">
+          Your details
+        </div>
+        <a
+          href="/account/profile"
+          className="group flex flex-wrap items-center justify-between gap-4 border border-hairline bg-cream-card px-6 py-5 transition-colors hover:border-brg"
+        >
+          <div>
+            <span className="label-mono !tracking-[0.14em] text-brg">
+              Profile &amp; address
+            </span>
+            <p className="mt-1.5 max-w-[52ch] text-[0.92rem] text-ink-soft">
+              Your name, delivery address and the cars in your garage — kept on
+              file so ordering is quicker.
+            </p>
+          </div>
+          <span className="label-mono !text-[0.7rem] text-brg transition-transform group-hover:translate-x-1">
+            Edit →
+          </span>
+        </a>
       </div>
     </main>
   );
