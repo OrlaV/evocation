@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
 import DocPage, { H2, P, UL } from "@/components/DocPage";
+import { pageMeta } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata = pageMeta({
   title: "Returns & Refunds | Evocation",
   description:
     "Fits or refunded. How to return an Evocation part and how the guarantee works.",
-  alternates: { canonical: "/legal/returns" },
-};
+  path: "/legal/returns",
+});
 
 export default function ReturnsPage() {
   return (
@@ -14,13 +14,12 @@ export default function ReturnsPage() {
       kicker="Support"
       title="Returns & Refunds"
       intro="Fits or refunded — and exchanged if it fails through a fault of ours."
-      updated="June 2026"
-      draft
+      updated="July 2026"
     >
       <H2>Fits or refunded</H2>
       <P>
         If a part doesn&rsquo;t fit the vehicle it&rsquo;s listed for, send it
-        back within <b>[30] days</b> of delivery for a full refund of the item
+        back within <b>14 days</b> of delivery for a full refund of the item
         price. Tell us your order number and what didn&rsquo;t fit — your
         chassis/VIN helps us improve the part.
       </P>
@@ -47,8 +46,8 @@ export default function ReturnsPage() {
         items={[
           "Email contact@evocation.store with your order number — we'll confirm the return address.",
           "Pack the part safely; include a note with your order number.",
-          "Refunds are issued to your original payment method once we receive the part, typically within [5] working days.",
-          "Return postage for a non-fit return is [your policy — e.g. covered by us / paid by you]; faulty returns are always on us.",
+          "Refunds are issued to your original payment method once we receive the part, typically within 5 working days.",
+          "Return postage for a non-fit return is paid by you; faulty returns are always on us.",
         ]}
       />
 

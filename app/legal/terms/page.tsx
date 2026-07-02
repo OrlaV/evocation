@@ -1,21 +1,22 @@
-import type { Metadata } from "next";
 import DocPage, { H2, P, UL } from "@/components/DocPage";
+import { pageMeta } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata = pageMeta({
   title: "Terms & Conditions | Evocation",
   description:
     "The terms of sale for Evocation — pattern interior & trim parts, printed to order in the UK.",
-  alternates: { canonical: "/legal/terms" },
-};
+  path: "/legal/terms",
+});
 
 export default function TermsPage() {
   return (
-    <DocPage kicker="Legal" title="Terms & Conditions" updated="June 2026" draft>
+    <DocPage kicker="Legal" title="Terms & Conditions" updated="July 2026">
       <P>
         These terms govern your use of evocation.store and any purchase you make
         from Evocation (&ldquo;we&rdquo;, &ldquo;us&rdquo;). By placing an order
-        you accept them. Evocation is operated by [legal entity name], [registered
-        address], UK. Contact: contact@evocation.store.
+        you accept them. Evocation is operated by Collation Ltd, 48 Acomb
+        Crescent, Newcastle upon Tyne NE3 2BA, United Kingdom. Contact:
+        contact@evocation.store.
       </P>
 
       <H2>What we sell</H2>

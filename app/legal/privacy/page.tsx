@@ -1,20 +1,20 @@
-import type { Metadata } from "next";
 import DocPage, { H2, P, UL } from "@/components/DocPage";
+import { pageMeta } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata = pageMeta({
   title: "Privacy Policy | Evocation",
   description:
     "How Evocation collects, uses and protects your personal data (UK GDPR).",
-  alternates: { canonical: "/legal/privacy" },
-};
+  path: "/legal/privacy",
+});
 
 export default function PrivacyPage() {
   return (
-    <DocPage kicker="Legal" title="Privacy Policy" updated="June 2026" draft>
+    <DocPage kicker="Legal" title="Privacy Policy" updated="July 2026">
       <P>
-        This policy explains how Evocation ([legal entity], [address], UK)
-        handles your personal data under UK GDPR. We are the data controller.
-        Questions: contact@evocation.store.
+        This policy explains how Evocation (Collation Ltd, 48 Acomb Crescent,
+        Newcastle upon Tyne NE3 2BA, UK) handles your personal data under UK
+        GDPR. We are the data controller. Questions: contact@evocation.store.
       </P>
 
       <H2>What we collect</H2>

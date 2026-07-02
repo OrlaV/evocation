@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
 import DocPage, { H2, P, UL } from "@/components/DocPage";
+import { pageMeta } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata = pageMeta({
   title: "Shipping | Evocation",
   description:
     "Printed to order in the UK, shipped worldwide by Royal Mail. Delivery times and costs.",
-  alternates: { canonical: "/legal/shipping" },
-};
+  path: "/legal/shipping",
+});
 
 export default function ShippingPage() {
   return (
@@ -14,8 +14,7 @@ export default function ShippingPage() {
       kicker="Support"
       title="Shipping"
       intro="Printed to order in the UK · shipped worldwide by Royal Mail."
-      updated="June 2026"
-      draft
+      updated="July 2026"
     >
       <H2>Made to order</H2>
       <P>
@@ -43,8 +42,8 @@ export default function ShippingPage() {
       <UL
         items={[
           "United Kingdom — Royal Mail Tracked (small £3.65 / medium £5.55 / large £11.95).",
-          "Europe — [rates to confirm].",
-          "Rest of world — [rates to confirm].",
+          "Europe — Royal Mail International Tracked (small £14.85 / medium £22.40 / large £34.95).",
+          "Rest of world — Royal Mail International Tracked (small £20.95 / medium £32.95 / large £49.95).",
         ]}
       />
 
