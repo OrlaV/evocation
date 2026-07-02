@@ -102,24 +102,13 @@ export default function Hero({
 
   return (
     <section className="hero-dark relative overflow-hidden border-b border-hairline text-cream">
-      {/* ===== BACKGROUND PHOTO =====
-          Replace this whole block with:
-          <img src="/hero.jpg" alt="" className="absolute inset-0 -z-10 h-full w-full object-cover" />
-          The dark scrim below keeps the copy legible over any photo. */}
+      {/* macro shot of OEM-grain texture; bg-ink shows while it loads */}
       <div aria-hidden className="absolute inset-0 -z-10 bg-ink">
-        <div
-          className="absolute inset-0 opacity-[0.5]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(125deg, transparent 0 13px, rgba(255,255,255,0.025) 13px 14px)",
-          }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(120% 90% at 78% 8%, rgba(120,128,135,0.28), transparent 55%)",
-          }}
+        <img
+          src="/hero.webp"
+          alt=""
+          fetchPriority="high"
+          className="h-full w-full object-cover"
         />
       </div>
       {/* legibility scrim */}
