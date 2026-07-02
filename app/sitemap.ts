@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getPublishedProducts } from "@/lib/products";
 import { getVehiclePages } from "@/lib/vehicle-pages";
+import { getKnownRefs } from "@/lib/refs";
 import { GUIDES } from "@/lib/guides";
 import { SITE_URL as base } from "@/lib/site";
 
@@ -9,12 +10,14 @@ import { SITE_URL as base } from "@/lib/site";
    teaches crawlers to distrust the site's lastmod entirely. Products keep
    their real created_at. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [products, vehicles] = await Promise.all([
+  const [products, vehicles, refs] = await Promise.all([
     getPublishedProducts(),
     getVehiclePages(),
+    getKnownRefs(),
   ]);
   const staticPages: [string, number][] = [
     ["/shop", 0.9],
+    ["/ref", 0.7],
     ["/vehicles", 0.7],
     ["/requests", 0.6],
     ["/donors", 0.5],
@@ -49,6 +52,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...(p.created_at ? { lastModified: new Date(p.created_at) } : {}),
       changeFrequency: "monthly" as const,
       priority: 0.8,
+    })),
+    // the reference registry: one page per known OEM number (revived or
+    // queued) — the long-tail landing pages for "someone googles their ref"
+    ...refs.map((r) => ({
+      url: `${base}/ref/${r.ref}`,
+      changeFrequency: "weekly" as const,
+      priority: r.status === "revived" ? 0.7 : 0.5,
     })),
   ];
 }

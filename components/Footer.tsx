@@ -6,6 +6,7 @@ const COLUMNS = [
     title: "Shop",
     links: [
       { label: "The Registry", href: "/shop" },
+      { label: "Part number lookup", href: "/ref" },
       { label: "Parts by vehicle", href: "/vehicles" },
       { label: "Most-wanted parts", href: "/requests" },
       { label: "Request a part", href: "/#queue" },

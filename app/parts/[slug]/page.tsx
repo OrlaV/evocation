@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getProductBySlug, getPublishedProducts } from "@/lib/products";
-import { fitmentSpec, optionRefs, refLabels } from "@/lib/types";
+import { fitmentSpec, optionRefs, refLabels, normalizeRef } from "@/lib/types";
 import { imageUrl } from "@/lib/storage";
 import { SITE_URL, pageMeta } from "@/lib/site";
 import { vehicleSlug, vehicleKey } from "@/lib/vehicles";
@@ -220,7 +220,12 @@ export default async function ProductPage({
               {refs.map((r, i) => (
                 <span key={r}>
                   {i > 0 && " · "}
-                  <b className="font-medium text-ink">{r}</b>
+                  <a
+                    href={`/ref/${normalizeRef(r)}`}
+                    className="font-medium text-ink underline decoration-hairline underline-offset-2 transition-colors hover:text-brg"
+                  >
+                    {r}
+                  </a>
                   {labels[r] && ` (${labels[r]})`}
                 </span>
               ))}{" "}

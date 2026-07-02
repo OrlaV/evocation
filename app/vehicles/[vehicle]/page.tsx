@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getVehiclePage, getVehiclePages } from "@/lib/vehicle-pages";
-import { optionRefs } from "@/lib/types";
+import { optionRefs, normalizeRef } from "@/lib/types";
 import { SITE_URL, pageMeta } from "@/lib/site";
 import { PartCard } from "@/components/Registry";
 import Reveal from "@/components/Reveal";
@@ -123,7 +123,13 @@ export default async function VehiclePage({
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 font-mono text-[0.82rem] text-ink-soft">
               {refs.map((r) => (
-                <span key={r}>{r}</span>
+                <a
+                  key={r}
+                  href={`/ref/${normalizeRef(r)}`}
+                  className="transition-colors hover:text-brg"
+                >
+                  {r}
+                </a>
               ))}
             </div>
           </Reveal>
