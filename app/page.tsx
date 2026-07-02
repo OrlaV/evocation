@@ -11,6 +11,15 @@ import { optionRefs } from "@/lib/types";
 import { getHomeStats } from "@/lib/stats";
 import { getQueueBoard, getUserVoteKeys } from "@/lib/queue";
 import { getUser } from "@/lib/customer-auth";
+import { pageMeta, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/site";
+
+// canonical + og:url for the homepage live here (not in the root layout) so
+// they don't leak onto every other page via the shallow metadata merge.
+export const metadata = pageMeta({
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  path: "/",
+});
 
 export default async function Home() {
   // reads the session (cookies) for the queue's auth state → dynamic render

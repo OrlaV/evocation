@@ -1,17 +1,17 @@
-import type { Metadata } from "next";
 import { getPublishedProducts } from "@/lib/products";
 import ShopGrid from "@/components/ShopGrid";
 import Reveal from "@/components/Reveal";
 import SectionNo from "@/components/SectionNo";
+import { pageMeta } from "@/lib/site";
 
-export const metadata: Metadata = {
+// canonical stays on the bare /shop so the ?q=/?make= filter permutations
+// don't get indexed as duplicates.
+export const metadata = pageMeta({
   title: "Shop — Evocation",
   description:
     "Discontinued interior & trim parts for youngtimers and classics, revived by Evocation. Printed to order in the UK, shipped worldwide.",
-  // canonical stays on the bare /shop so the ?q=/?make= filter permutations
-  // don't get indexed as duplicates.
-  alternates: { canonical: "/shop" },
-};
+  path: "/shop",
+});
 
 // keep the registry fresh without a rebuild when products change directly in DB
 export const revalidate = 3600;
@@ -37,7 +37,7 @@ export default async function ShopPage({
       <div className="wrap relative">
         <SectionNo>The Registry — All parts</SectionNo>
         <div className="mb-12 flex flex-wrap items-end justify-between gap-6">
-          <Reveal as="h2" className="font-display max-w-[20ch] text-[clamp(1.9rem,3.8vw,2.9rem)] leading-[1.06] font-bold tracking-[-0.015em]">
+          <Reveal as="h1" className="font-display max-w-[20ch] text-[clamp(1.9rem,3.8vw,2.9rem)] leading-[1.06] font-bold tracking-[-0.015em]">
             {products.length} parts revived.{" "}
             <em className="text-brg not-italic">More in the queue.</em>
           </Reveal>

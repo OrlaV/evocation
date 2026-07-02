@@ -1,16 +1,16 @@
-import type { Metadata } from "next";
 import { getVehiclePages } from "@/lib/vehicle-pages";
 import Reveal from "@/components/Reveal";
 import SectionNo from "@/components/SectionNo";
+import { pageMeta } from "@/lib/site";
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
+export const metadata = pageMeta({
   title: "Parts by vehicle — Evocation",
   description:
     "Browse revived interior & trim parts by car. Discontinued (NLA) and hard-to-find pieces for classics and youngtimers, remade with an OEM-grain finish and shipped worldwide.",
-  alternates: { canonical: "/vehicles" },
-};
+  path: "/vehicles",
+});
 
 export default async function VehiclesIndex() {
   const vehicles = await getVehiclePages();

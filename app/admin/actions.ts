@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { createServiceClient } from "@/lib/supabase-server";
 import type { FaqItem, Fitment, PurchaseOption } from "@/lib/types";
 import { resolveMake, resolveModel } from "@/lib/vehicles";
-import { sendEmail, emailConfigured } from "@/lib/email";
+import { sendEmail, emailConfigured, escapeHtml } from "@/lib/email";
 import {
   orderConfirmationEmail,
   orderShippedEmail,
@@ -127,6 +127,19 @@ export async function saveSettingsAction(payload: Settings) {
   }
   if (!payload.shipping?.zones?.length) {
     return { ok: false as const, error: "At least one shipping zone is required." };
+  }
+  // a cleared field parses to 0 and a negative rate would kill every checkout
+  // at Stripe — refuse both rather than silently shipping for free.
+  for (const z of payload.shipping.zones) {
+    for (const tier of ["small", "medium", "large"] as const) {
+      const rate = z.rates?.[tier];
+      if (!Number.isFinite(rate) || rate <= 0) {
+        return {
+          ok: false as const,
+          error: `Shipping rate "${z.label} · ${tier}" must be a positive amount (got ${rate ?? "nothing"}).`,
+        };
+      }
+    }
   }
 
   const supabase = createServiceClient();
@@ -282,11 +295,11 @@ function notifyHtml(
   model: string | null,
 ) {
   const site = SITE_URL;
-  const vehicle = [make, model].filter(Boolean).join(" ");
+  const vehicle = escapeHtml([make, model].filter(Boolean).join(" "));
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#23272b">
     <p style="font:600 11px/1 monospace;letter-spacing:.18em;color:#d8261d;text-transform:uppercase">Evocation — it's back</p>
-    <h1 style="font-size:24px;margin:12px 0">${name}</h1>
+    <h1 style="font-size:24px;margin:12px 0">${escapeHtml(name)}</h1>
     <p style="font-size:15px;line-height:1.5;color:#5b6166">
       You asked us to bring back a part${vehicle ? ` for your <strong>${vehicle}</strong>` : ""}.
       It's now in the registry — printed to order, OEM-grain finish, fits or refunded.
@@ -391,6 +404,16 @@ export async function updateOrderAction(input: {
     .maybeSingle<OrderRow>();
   if (!order) return { ok: false, msg: "Order not found." };
 
+  // "refunded" is an OUTCOME, not a manual state: setting it here would email
+  // the customer "refund issued" without any money moving. Only the Stripe
+  // refund action (or the charge.refunded webhook) may flip an order to it.
+  if (input.status === "refunded" && order.status !== "refunded") {
+    return {
+      ok: false,
+      msg: 'Use the "Refund via Stripe" button — it refunds the money, then marks the order.',
+    };
+  }
+
   const tracking = (input.tracking_number ?? "").trim() || null;
   const patch: Record<string, unknown> = {
     status: input.status,
@@ -472,6 +495,7 @@ export async function refundOrderAction(
       : undefined;
   const isPartial = amt !== undefined && total > 0 && amt < total;
 
+  let refundedPence: number;
   try {
     const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
     const pi =
@@ -479,10 +503,13 @@ export async function refundOrderAction(
         ? session.payment_intent
         : session.payment_intent?.id;
     if (!pi) return { ok: false, msg: "No payment intent — can't refund." };
-    await stripe.refunds.create({
+    const refund = await stripe.refunds.create({
       payment_intent: pi,
       ...(isPartial ? { amount: amt } : {}),
     });
+    // trust Stripe's actual figure: a no-amount refund only returns the
+    // REMAINDER when part was already refunded from the dashboard.
+    refundedPence = refund.amount ?? (isPartial ? amt! : total);
   } catch (e) {
     return { ok: false, msg: `Stripe refund failed: ${(e as Error).message}` };
   }
@@ -490,7 +517,6 @@ export async function refundOrderAction(
   // a partial refund leaves the order active (status unchanged); a full refund
   // flips it to "refunded". The check constraint has no "partially refunded".
   const patch: Record<string, unknown> = isPartial ? {} : { status: "refunded" };
-  const refundedPence = isPartial ? amt! : total;
   let note = isPartial
     ? `Partially refunded ${(refundedPence / 100).toFixed(2)} in Stripe`
     : "Refunded in Stripe";

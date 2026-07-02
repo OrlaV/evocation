@@ -174,7 +174,11 @@ drop policy if exists "public can join queue" on public.queue_requests;
 drop policy if exists "users insert own queue rows" on public.queue_requests;
 create policy "users insert own queue rows"
   on public.queue_requests for insert to authenticated
-  with check (user_id = auth.uid());
+  with check (
+    user_id = auth.uid()
+    and email = auth.email()
+    and kind = 'request'
+  );
 drop policy if exists "users read own queue rows" on public.queue_requests;
 create policy "users read own queue rows"
   on public.queue_requests for select to authenticated
@@ -426,7 +430,11 @@ alter table public.donor_offers enable row level security;
 drop policy if exists "users insert own donor offers" on public.donor_offers;
 create policy "users insert own donor offers"
   on public.donor_offers for insert to authenticated
-  with check (user_id = auth.uid());
+  with check (
+    user_id = auth.uid()
+    and email = auth.email()
+    and status = 'new'
+  );
 drop policy if exists "users read own donor offers" on public.donor_offers;
 create policy "users read own donor offers"
   on public.donor_offers for select to authenticated

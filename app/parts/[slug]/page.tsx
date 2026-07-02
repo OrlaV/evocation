@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getProductBySlug, getPublishedProducts } from "@/lib/products";
 import { fitmentSpec, optionRefs, refLabels } from "@/lib/types";
 import { imageUrl } from "@/lib/storage";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, pageMeta } from "@/lib/site";
 import { vehicleSlug, vehicleKey } from "@/lib/vehicles";
 import ProductGallery from "@/components/ProductGallery";
 import FitsYourGarage from "@/components/FitsYourGarage";
@@ -36,11 +36,11 @@ export async function generateMetadata({
   const refs = optionRefs(product);
   const refList = refs.join(", ");
   const status = product.badge ? ` (${product.badge})` : "";
-  return {
+  return pageMeta({
     title: `${product.name}${fit?.model ? ` — ${fit.model}` : ""} | Evocation`,
     description: `Replaces original part ${refs.length > 1 ? "nos." : "no."} ${refList}${status}${product.maker ? `, originally fitted to ${product.maker}` : ""}. Printed to order in the UK in ${product.material.split(",")[0]}, OEM-grain finish — fits or refunded.`,
-    alternates: { canonical: `/parts/${product.slug}` },
-  };
+    path: `/parts/${product.slug}`,
+  });
 }
 
 export default async function ProductPage({
@@ -101,9 +101,12 @@ export default async function ProductPage({
     name: `${product.name}${fit ? ` — ${fit.model}` : ""}`,
     sku: product.evo_no,
     mpn: primaryRef,
-    ...(gallery.length
-      ? { image: gallery.map((g) => imageUrl(g.path)) }
-      : {}),
+    // `image` is REQUIRED for Google's Product rich result — while real photos
+    // are pending, fall back to the per-part dynamic OG card so Search Console
+    // doesn't flag every part page.
+    image: gallery.length
+      ? gallery.map((g) => imageUrl(g.path))
+      : [`${SITE_URL}/parts/${product.slug}/opengraph-image`],
     brand: { "@type": "Brand", name: "Evocation" },
     description: `Replaces original part ${refs.length > 1 ? "nos." : "no."} ${refs.join(", ")}${product.badge ? ` (${product.badge})` : ""}${product.maker ? `, originally fitted to ${product.maker}` : ""}. Pattern part printed to order in the UK, OEM-grain finish — fits or refunded.`,
     itemCondition: "https://schema.org/NewCondition",

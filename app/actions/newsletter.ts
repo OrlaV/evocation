@@ -33,8 +33,10 @@ export async function subscribeNewsletterAction(
     .eq("email", clean)
     .maybeSingle();
 
+  // same reply as the "confirmation sent" path — a distinct message would let
+  // anyone probe whether an address is already subscribed (enumeration).
   if (existing?.status === "confirmed") {
-    return { ok: true, msg: "You're already subscribed — thank you." };
+    return { ok: true, msg: "Almost there — check your inbox to confirm." };
   }
 
   // reuse an existing pending token, else mint one

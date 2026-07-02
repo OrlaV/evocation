@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getVehiclePage, getVehiclePages } from "@/lib/vehicle-pages";
 import { optionRefs } from "@/lib/types";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, pageMeta } from "@/lib/site";
 import { PartCard } from "@/components/Registry";
 import Reveal from "@/components/Reveal";
 import SectionNo from "@/components/SectionNo";
@@ -25,11 +25,11 @@ export async function generateMetadata({
   if (!vp) return {};
   const name = `${vp.make} ${vp.model}`;
   const n = vp.products.length;
-  return {
+  return pageMeta({
     title: `${name} interior & trim parts — revived | Evocation`,
     description: `Discontinued (NLA) and hard-to-find interior & trim parts for the ${name}, 3D-scanned from originals and remade with an OEM-grain finish. ${n} part${n > 1 ? "s" : ""} available — printed to order in the UK, shipped worldwide. Fits or refunded.`,
-    alternates: { canonical: `/vehicles/${vp.slug}` },
-  };
+    path: `/vehicles/${vp.slug}`,
+  });
 }
 
 export default async function VehiclePage({

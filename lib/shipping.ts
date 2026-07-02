@@ -85,6 +85,16 @@ export const ALL_COUNTRIES: AllowedCountry[] = Array.from(
   new Set(Object.values(ZONE_COUNTRIES).flat()),
 );
 
+/** Zone a delivery country belongs to (unknown codes fall to "world" — the
+    dearest zone, so a mismatch check never under-estimates). */
+export function zoneForCountry(code?: string | null): ShipZone {
+  const c = (code ?? "").toUpperCase();
+  if (!c) return "world";
+  if (ZONE_COUNTRIES.uk.includes(c as AllowedCountry)) return "uk";
+  if (ZONE_COUNTRIES.eu.includes(c as AllowedCountry)) return "eu";
+  return "world";
+}
+
 /* ---------- packing & pricing ---------- */
 export type PackItem = { slots: number; qty: number };
 

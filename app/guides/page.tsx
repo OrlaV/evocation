@@ -1,14 +1,14 @@
-import type { Metadata } from "next";
 import { GUIDES } from "@/lib/guides";
 import Reveal from "@/components/Reveal";
 import SectionNo from "@/components/SectionNo";
+import { pageMeta } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata = pageMeta({
   title: "Guides — identify & fit your classic car parts | Evocation",
   description:
     "Practical guides for owners of classics and youngtimers: find your original part number, check whether a part is discontinued, and confirm fitment before you order.",
-  alternates: { canonical: "/guides" },
-};
+  path: "/guides",
+});
 
 export default function GuidesIndex() {
   return (

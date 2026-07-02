@@ -1,17 +1,17 @@
-import type { Metadata } from "next";
 import { getQueueBoard } from "@/lib/queue";
 import RequestsBoard from "@/components/RequestsBoard";
 import Reveal from "@/components/Reveal";
 import SectionNo from "@/components/SectionNo";
+import { pageMeta } from "@/lib/site";
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
+export const metadata = pageMeta({
   title: "Most-wanted parts — the resurrection queue | Evocation",
   description:
     "The parts classic and youngtimer owners most want us to bring back next, ranked by demand. Check if yours is already requested — or add it to the queue.",
-  alternates: { canonical: "/requests" },
-};
+  path: "/requests",
+});
 
 export default async function RequestsPage() {
   const board = await getQueueBoard(200);

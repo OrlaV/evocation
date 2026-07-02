@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { CartProvider } from "@/components/CartProvider";
 import { CurrencyProvider } from "@/components/CurrencyProvider";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/site";
 import "./globals.css";
 
 // Paddock / Silver Arrows livery type: extended Archivo (display),
@@ -29,19 +29,21 @@ const plexMono = JetBrains_Mono({
   variable: "--font-plex-mono",
 });
 
-const TITLE = "Evocation — We bring back the parts they stopped making";
-const DESCRIPTION =
-  "Discontinued interior & trim parts for youngtimers and classics, 3D-scanned from originals and remade in automotive-grade engineering polymers with a true OEM-grain finish. Stamped Evocation. Referenced to the original.";
+const TITLE = SITE_TITLE;
+const DESCRIPTION = SITE_DESCRIPTION;
 
+/* No `alternates.canonical` or `openGraph.url` here: metadata merges shallowly,
+   so a root-level canonical/og:url would leak the homepage URL onto every page
+   that doesn't override the whole object (noindex pages included — a
+   contradictory signal). The homepage sets its own in app/page.tsx; public
+   pages build theirs with pageMeta() (lib/site.ts). */
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: "Evocation",
-    url: SITE_URL,
     title: TITLE,
     description: DESCRIPTION,
   },

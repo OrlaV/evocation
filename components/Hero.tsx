@@ -121,9 +121,6 @@ export default function Hero({
               "radial-gradient(120% 90% at 78% 8%, rgba(120,128,135,0.28), transparent 55%)",
           }}
         />
-        <span className="label-mono absolute right-5 bottom-4 !text-[0.6rem] text-cream/35">
-          Photo — hero background
-        </span>
       </div>
       {/* legibility scrim */}
       <div

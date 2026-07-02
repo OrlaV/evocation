@@ -11,7 +11,9 @@ import {
 } from "@/app/admin/actions";
 
 const CLICK_AND_DROP = "https://business.parcel.royalmail.com/";
-const STATUSES = ["paid", "printed", "shipped", "refunded"] as const;
+// "refunded" is set by the Stripe refund button / webhook, never by hand —
+// picking it in the dropdown would email "refund issued" with no money moving.
+const STATUSES = ["paid", "printed", "shipped"] as const;
 
 export type AdminOrder = {
   id: string;
@@ -38,18 +40,26 @@ type Addr = {
   country?: string | null;
 };
 
+type ShipUnderpaid = {
+  zone?: string;
+  expected_pence?: number;
+  paid_pence?: number;
+};
+
 function shippingAddress(shipping: unknown): {
   name: string | null;
   phone: string | null;
   lines: string[];
   gift: string | null;
+  underpaid: ShipUnderpaid | null;
 } {
   if (!shipping || typeof shipping !== "object")
-    return { name: null, phone: null, lines: [], gift: null };
+    return { name: null, phone: null, lines: [], gift: null, underpaid: null };
   const s = shipping as {
     name?: string | null;
     phone?: string | null;
     gift_message?: string | null;
+    ship_underpaid?: ShipUnderpaid | null;
     address?: Addr;
   } & Addr;
   const a: Addr = s.address ?? s;
@@ -65,6 +75,7 @@ function shippingAddress(shipping: unknown): {
     phone: s.phone ?? null,
     lines,
     gift: s.gift_message ?? null,
+    underpaid: s.ship_underpaid ?? null,
   };
 }
 
@@ -83,7 +94,7 @@ function OrderCard({ order }: { order: AdminOrder }) {
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [pending, start] = useTransition();
 
-  const { name, phone, lines, gift } = shippingAddress(order.shipping);
+  const { name, phone, lines, gift, underpaid } = shippingAddress(order.shipping);
   const items = (order.items ?? [])
     .map((i) => `${i.qty ?? 1}× ${i.name ?? "Part"}`)
     .join(", ");
@@ -180,6 +191,16 @@ function OrderCard({ order }: { order: AdminOrder }) {
               {gift}
             </div>
           )}
+          {underpaid && (
+            <div className="mt-2 border border-brg px-2 py-1.5 text-[0.8rem] text-brg">
+              ⚠ Shipping underpaid — buyer picked a cheaper zone than their
+              address ({underpaid.zone}
+              {underpaid.expected_pence != null && underpaid.paid_pence != null
+                ? `: paid ${formatPrice(underpaid.paid_pence)}, rate is ${formatPrice(underpaid.expected_pence)}`
+                : ""}
+              ).
+            </div>
+          )}
         </div>
       </div>
 
@@ -197,6 +218,7 @@ function OrderCard({ order }: { order: AdminOrder }) {
                 {s}
               </option>
             ))}
+            {refunded && <option value="refunded">refunded</option>}
           </select>
         </label>
         <label className="flex min-w-[200px] flex-1 flex-col gap-1">

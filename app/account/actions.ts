@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/customer-auth";
 import { createServiceClient } from "@/lib/supabase-server";
 import { ensureStripeCustomer } from "@/lib/stripe-customer";
 import { resolveMake, resolveModel, vehicleKey } from "@/lib/vehicles";
-import { sendEmail, emailConfigured } from "@/lib/email";
+import { sendEmail, emailConfigured, escapeHtml } from "@/lib/email";
 import { SITE_URL } from "@/lib/site";
 
 export type ProfilePayload = {
@@ -173,7 +173,7 @@ export async function createReturnAction(input: {
       await sendEmail({
         to,
         subject: `Return requested — ${orderNo} (${reason})`,
-        html: `<p>${user.email ?? order.email} requested a return for ${orderNo}.<br>Reason: ${reason}<br>${details ?? ""}</p><p><a href="${SITE_URL}/admin/returns">Open returns →</a></p>`,
+        html: `<p>${escapeHtml(user.email ?? order.email)} requested a return for ${orderNo}.<br>Reason: ${reason}<br>${escapeHtml(details ?? "")}</p><p><a href="${SITE_URL}/admin/returns">Open returns →</a></p>`,
         text: `${user.email ?? order.email} requested a return for ${orderNo} (${reason}).\n${details ?? ""}\n${SITE_URL}/admin/returns`,
       });
     }

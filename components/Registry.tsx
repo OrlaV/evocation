@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import type { Product } from "@/lib/types";
 import { formatPrice, optionRefs, refLabels, startingPrice } from "@/lib/types";
+import { imageUrl } from "@/lib/storage";
 import Reveal, { EASE } from "./Reveal";
 import SectionNo from "./SectionNo";
 import GhostNumeral from "./GhostNumeral";
@@ -32,6 +33,9 @@ export function PartCard({
   const cardId = part.evo_no.toLowerCase();
   const refs = optionRefs(part);
   const labels = refLabels(part);
+  // first gallery image = the card photo (same convention as the product page
+  // hero); no photo yet → keep the dashed placeholder.
+  const hero = part.gallery?.[0];
 
   return (
     <motion.a
@@ -45,12 +49,23 @@ export function PartCard({
       className="group relative flex flex-col border border-hairline bg-cream-card text-inherit no-underline transition-[border-color,box-shadow] duration-300 hover:border-ink hover:shadow-[0_18px_40px_-18px_rgba(26,23,20,0.25)]"
     >
       <div className="hatch relative flex aspect-[4/3] items-center justify-center overflow-hidden border-b border-hairline">
+        {hero && (
+          /* eslint-disable-next-line @next/next/no-img-element -- card grids
+             render many sizes; plain img + browser lazy-loading keeps the
+             client component simple until an <Image> pass is done site-wide */
+          <img
+            src={imageUrl(hero.path)}
+            alt={hero.alt || part.name}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          />
+        )}
         <Corner pos="tl" />
         <Corner pos="tr" />
         <Corner pos="bl" />
         <Corner pos="br" />
         <span
-          className={`absolute font-mono font-medium text-brass ${
+          className={`absolute font-mono font-medium ${hero ? "text-cream drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]" : "text-brass"} ${
             compact
               ? "top-3 left-3 text-[0.62rem] tracking-[0.1em]"
               : "top-4 left-4 text-[0.72rem] tracking-[0.12em]"
@@ -58,13 +73,15 @@ export function PartCard({
         >
           {part.evo_no}
         </span>
-        <span
-          className={`label-mono whitespace-nowrap border border-dashed border-ink-soft bg-cream text-ink-soft transition-transform duration-500 group-hover:scale-[1.04] ${
-            compact ? "px-3 py-1.5 !text-[0.6rem]" : "px-3.5 py-2 !text-[0.7rem]"
-          }`}
-        >
-          Photo — macro, grain finish
-        </span>
+        {!hero && (
+          <span
+            className={`label-mono whitespace-nowrap border border-dashed border-ink-soft bg-cream text-ink-soft transition-transform duration-500 group-hover:scale-[1.04] ${
+              compact ? "px-3 py-1.5 !text-[0.6rem]" : "px-3.5 py-2 !text-[0.7rem]"
+            }`}
+          >
+            Photo — macro, grain finish
+          </span>
+        )}
       </div>
 
       <div className={compact ? "px-5 pt-5 pb-2" : "px-6 pt-6 pb-1"}>

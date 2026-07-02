@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
 import DocPage, { H2, P } from "@/components/DocPage";
+import { pageMeta } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata = pageMeta({
   title: "About | Evocation",
   description:
     "Evocation brings back discontinued interior & trim parts for classics and youngtimers — 3D-scanned from originals, remade to last.",
-  alternates: { canonical: "/about" },
-};
+  path: "/about",
+});
 
 export default function AboutPage() {
   return (
@@ -50,11 +50,10 @@ export default function AboutPage() {
         .
       </P>
 
-      <P>
-        {/* Orlando — replace this paragraph with your own words + a photo when ready. */}
-        [Add a personal note here: who you are, the car that started it, and why
-        you care. A face and a story sell heritage better than anything.]
-      </P>
+      {/* Orlando — add a personal paragraph here when ready: who you are, the
+          car that started it, and why you care. A face and a story sell
+          heritage better than anything. (Removed from render 2026-07-02: the
+          bracketed placeholder was visible on the live page.) */}
     </DocPage>
   );
 }

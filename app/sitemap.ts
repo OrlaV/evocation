@@ -4,12 +4,15 @@ import { getVehiclePages } from "@/lib/vehicle-pages";
 import { GUIDES } from "@/lib/guides";
 import { SITE_URL as base } from "@/lib/site";
 
+/* No lastModified on static/vehicle/guide entries: stamping them with
+   new Date() at every generation says "everything changed just now", which
+   teaches crawlers to distrust the site's lastmod entirely. Products keep
+   their real created_at. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [products, vehicles] = await Promise.all([
     getPublishedProducts(),
     getVehiclePages(),
   ]);
-  const now = new Date();
   const staticPages: [string, number][] = [
     ["/shop", 0.9],
     ["/vehicles", 0.7],
@@ -24,28 +27,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ["/legal/privacy", 0.3],
   ];
   return [
-    { url: base, lastModified: now, changeFrequency: "weekly", priority: 1 },
+    { url: base, changeFrequency: "weekly", priority: 1 },
     ...staticPages.map(([path, priority]) => ({
       url: `${base}${path}`,
-      lastModified: now,
       changeFrequency: "monthly" as const,
       priority,
     })),
     ...vehicles.map((v) => ({
       url: `${base}/vehicles/${v.slug}`,
-      lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),
     ...GUIDES.map((g) => ({
       url: `${base}/guides/${g.slug}`,
-      lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.5,
     })),
     ...products.map((p) => ({
       url: `${base}/parts/${p.slug}`,
-      lastModified: p.created_at ? new Date(p.created_at) : now,
+      ...(p.created_at ? { lastModified: new Date(p.created_at) } : {}),
       changeFrequency: "monthly" as const,
       priority: 0.8,
     })),

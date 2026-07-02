@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
 import DocPage, { H2, P } from "@/components/DocPage";
+import { pageMeta } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata = pageMeta({
   title: "The Process | Evocation",
   description:
     "How Evocation revives a part: source a good original, 3D-scan it, redraw it, print in engineering polymers, and hand-finish to an OEM-style grain.",
-  alternates: { canonical: "/process" },
-};
+  path: "/process",
+});
 
 const STEPS = [
   {

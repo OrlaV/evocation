@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
 import DocPage, { H2, P } from "@/components/DocPage";
+import { pageMeta } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata = pageMeta({
   title: "Contact | Evocation",
   description:
     "Get in touch with Evocation — fitment questions, orders, returns, or a part you can't find.",
-  alternates: { canonical: "/contact" },
-};
+  path: "/contact",
+});
 
 export default function ContactPage() {
   return (

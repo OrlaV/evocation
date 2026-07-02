@@ -90,6 +90,7 @@ export default function ReviewForm({
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Title (optional)"
+        aria-label="Review title (optional)"
         className="mt-3 w-full border border-hairline bg-transparent px-3 py-2.5 font-mono text-[0.82rem] outline-none focus:border-ink"
       />
       <textarea
@@ -97,6 +98,7 @@ export default function ReviewForm({
         onChange={(e) => setBody(e.target.value)}
         placeholder="How does it fit? How's the finish?"
         rows={3}
+        aria-label="Your review"
         className="mt-2 w-full border border-hairline bg-transparent px-3 py-2.5 font-mono text-[0.82rem] outline-none focus:border-ink"
       />
       <button

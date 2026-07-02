@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
+import { zoneForCountry } from "@/lib/shipping";
 import { createServiceClient } from "@/lib/supabase-server";
 import { sendEmail, emailConfigured } from "@/lib/email";
 import {
@@ -50,8 +51,10 @@ export async function POST(req: Request) {
   if (ORDER_EVENTS.includes(event.type)) {
     const session = event.data.object as Stripe.Checkout.Session;
 
-    // only record the order once the money is actually captured
-    if (session.payment_status !== "paid") {
+    // only record the order once the money is actually captured.
+    // "no_payment_required" = a 100% promotion code brought the total to zero —
+    // still a real order that must be recorded and fulfilled.
+    if (!["paid", "no_payment_required"].includes(session.payment_status)) {
       console.log(
         "[stripe webhook] not captured yet, skipping:",
         session.payment_status,
@@ -123,12 +126,35 @@ export async function POST(req: Request) {
       const giftMessage =
         session.custom_fields?.find((f) => f.key === "gift_message")?.text
           ?.value || null;
+
+      // Checkout offers every zone's rate (so no buyer is blocked), which
+      // means a buyer CAN pick the cheap UK rate with an overseas address.
+      // Compare what they paid against the expected rate for their delivery
+      // country (posted in the session metadata) and flag underpayment.
+      const addr = baseShipping as { address?: { country?: string | null }; country?: string | null } | null;
+      const shipCountry = addr?.address?.country ?? addr?.country ?? null;
+      const expectedZone = zoneForCountry(shipCountry);
+      const expectedShipPence = Number(session.metadata?.[`ship_${expectedZone}`]);
+      const paidShipPence = session.shipping_cost?.amount_total ?? null;
+      const shipUnderpaid =
+        Number.isFinite(expectedShipPence) &&
+        expectedShipPence > 0 &&
+        paidShipPence != null &&
+        paidShipPence < expectedShipPence
+          ? {
+              zone: expectedZone,
+              expected_pence: expectedShipPence,
+              paid_pence: paidShipPence,
+            }
+          : null;
+
       const shipping =
-        baseShipping || phone || giftMessage
+        baseShipping || phone || giftMessage || shipUnderpaid
           ? {
               ...(baseShipping as object | null),
               ...(phone ? { phone } : {}),
               ...(giftMessage ? { gift_message: giftMessage } : {}),
+              ...(shipUnderpaid ? { ship_underpaid: shipUnderpaid } : {}),
             }
           : null;
 
@@ -185,6 +211,17 @@ export async function POST(req: Request) {
             email,
           });
           for (const to of admins) await sendEmail({ to, ...notif });
+          if (shipUnderpaid) {
+            const short = (p: number) => `£${(p / 100).toFixed(2)}`;
+            const line = `Order ${inserted?.order_no ?? session.id} ships to ${shipCountry} (${shipUnderpaid.zone} zone, ${short(shipUnderpaid.expected_pence)}) but the buyer paid the ${short(shipUnderpaid.paid_pence)} rate — short by ${short(shipUnderpaid.expected_pence - shipUnderpaid.paid_pence)}. Consider invoicing the difference or refunding.`;
+            for (const to of admins)
+              await sendEmail({
+                to,
+                subject: `⚠ Shipping underpaid — order ${inserted?.order_no ?? ""}`.trim(),
+                html: `<p>${line}</p>`,
+                text: line,
+              });
+          }
         }
       }
     } catch (e) {
@@ -198,11 +235,15 @@ export async function POST(req: Request) {
   // diverge from Stripe). Matched via the charge's payment_intent → session.
   if (event.type === "charge.refunded") {
     const charge = event.data.object as Stripe.Charge;
+    // Stripe fires charge.refunded for PARTIAL refunds too — only a FULL
+    // refund may close the order, otherwise refunding £5 of postage would
+    // mark a £120 order "refunded" and drop it from the fulfilment list.
+    const fullyRefunded = (charge.amount_refunded ?? 0) >= (charge.amount ?? 0);
     const pi =
       typeof charge.payment_intent === "string"
         ? charge.payment_intent
         : charge.payment_intent?.id;
-    if (pi) {
+    if (pi && fullyRefunded) {
       try {
         const sessions = await stripe.checkout.sessions.list({
           payment_intent: pi,

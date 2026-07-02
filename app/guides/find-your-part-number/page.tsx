@@ -1,15 +1,14 @@
-import type { Metadata } from "next";
 import DocPage, { H2, P, UL } from "@/components/DocPage";
 import { getGuide } from "@/lib/guides";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, pageMeta } from "@/lib/site";
 
 const guide = getGuide("find-your-part-number")!;
 
-export const metadata: Metadata = {
+export const metadata = pageMeta({
   title: `${guide.title} | Evocation`,
   description: guide.description,
-  alternates: { canonical: `/guides/${guide.slug}` },
-};
+  path: `/guides/${guide.slug}`,
+});
 
 export default function Guide() {
   const ld = [

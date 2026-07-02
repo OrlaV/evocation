@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import {
   shippingOptionsForCart,
+  shippingPenceForCart,
   ALL_COUNTRIES,
   type PackItem,
 } from "@/lib/shipping";
@@ -211,8 +212,17 @@ export async function POST(req: Request) {
       metadata: {
         item_lines: String(lineItems.length),
         evo_no: firstEvo,
-        refs: firstRefs,
+        // Stripe caps metadata values at 500 chars — a long OEM-ref list must
+        // never fail the whole checkout.
+        refs: firstRefs.slice(0, 450),
         user_id: user?.id ?? "",
+        // expected shipping per zone (pence) — the webhook compares the rate
+        // the buyer picked against their actual delivery country.
+        ship_uk: String(shippingPenceForCart(settings.shipping, "uk", packItems)),
+        ship_eu: String(shippingPenceForCart(settings.shipping, "eu", packItems)),
+        ship_world: String(
+          shippingPenceForCart(settings.shipping, "world", packItems),
+        ),
       },
       success_url: `${origin}/order/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cart`,
