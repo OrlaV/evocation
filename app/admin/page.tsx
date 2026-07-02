@@ -63,6 +63,12 @@ export default async function AdminPage() {
               Donor offers →
             </a>
             <a
+              href="/admin/coupons"
+              className="label-mono border border-hairline px-4 py-3 text-ink-soft transition-colors hover:border-ink hover:text-ink"
+            >
+              Coupons →
+            </a>
+            <a
               href="/admin/settings"
               className="label-mono border border-hairline px-4 py-3 text-ink-soft transition-colors hover:border-ink hover:text-ink"
             >

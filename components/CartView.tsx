@@ -253,6 +253,9 @@ export default function CartView({
           VAT included · region confirmed at checkout
           {code !== "GBP" && <> · ≈ {approxPrice(total, code)} {code}</>}
         </div>
+        <div className="label-mono mt-1 !text-[0.62rem] text-ink-soft/70">
+          Promo code? Enter it on the payment page.
+        </div>
 
         <motion.button
           whileHover={{ y: -1 }}
