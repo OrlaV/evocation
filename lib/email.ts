@@ -1,5 +1,9 @@
 /* Transactional email via Resend — wired but inert until configured.
    Needs RESEND_API_KEY and RESEND_FROM (a verified sending domain).
+   RESEND_FROM is the no-reply sender (noreply@evocation.store) — every
+   outbound email is either transactional or an internal notification, so
+   nothing should ever be sent from the contact@/support@ inboxes; those only
+   receive (contact-form routing lives in lib/contact-topics.ts).
    Uses the REST API directly so we don't add a dependency. */
 
 type SendArgs = {

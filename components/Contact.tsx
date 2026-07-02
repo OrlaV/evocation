@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { submitContactAction } from "@/app/actions/contact";
+import { CONTACT_TOPICS } from "@/lib/contact-topics";
 import Reveal from "./Reveal";
 import GhostNumeral from "./GhostNumeral";
 
@@ -13,6 +14,7 @@ const labelCls =
 
 /* Bare contact form — shared by the homepage section below and /contact. */
 export function ContactForm({ className = "" }: { className?: string }) {
+  const [topic, setTopic] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -23,7 +25,7 @@ export function ContactForm({ className = "" }: { className?: string }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setState("busy");
-    const r = await submitContactAction({ name, email, message, company });
+    const r = await submitContactAction({ topic, name, email, message, company });
     setMsg(r.msg);
     setState(r.ok ? "done" : "error");
   };
@@ -53,6 +55,41 @@ export function ContactForm({ className = "" }: { className?: string }) {
               aria-hidden="true"
               className="absolute -left-[9999px] h-0 w-0 opacity-0"
             />
+            <div>
+              <label htmlFor="contact-topic" className={labelCls}>
+                What&apos;s it about?
+              </label>
+              {/* native select, restyled to sit with the inputs; the chevron is
+                  drawn by us because appearance-none removes the platform one */}
+              <div className="relative">
+                <select
+                  id="contact-topic"
+                  required
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  className={`${inputCls} appearance-none pr-9 ${topic ? "" : "text-ink-soft/55"}`}
+                >
+                  {/* options carry their own colors — the dimmed placeholder
+                      color on the <select> would otherwise bleed into the
+                      native dropdown list (Windows renders options with the
+                      select's inherited color) */}
+                  <option value="" disabled className="text-ink-soft">
+                    Choose a topic…
+                  </option>
+                  {CONTACT_TOPICS.map((t) => (
+                    <option key={t.value} value={t.value} className="bg-cream text-ink">
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[0.7rem] text-ink-soft"
+                >
+                  ▾
+                </span>
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="contact-name" className={labelCls}>

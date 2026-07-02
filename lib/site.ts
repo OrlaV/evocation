@@ -10,6 +10,10 @@ export const SITE_URL = (
    domain, evocation.store). Used in legal/contact copy and structured data. */
 export const CONTACT_EMAIL = "contact@evocation.store";
 
+/* Order/after-sales inbox — contact-form messages about an existing order are
+   routed here instead of the general inbox (see lib/contact-topics.ts). */
+export const SUPPORT_EMAIL = "support@evocation.store";
+
 /* Site-wide default title/description (root layout + homepage metadata). */
 export const SITE_TITLE =
   "Evocation — We bring back the parts they stopped making";
