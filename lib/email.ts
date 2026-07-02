@@ -2,7 +2,13 @@
    Needs RESEND_API_KEY and RESEND_FROM (a verified sending domain).
    Uses the REST API directly so we don't add a dependency. */
 
-type SendArgs = { to: string; subject: string; html: string; text?: string };
+type SendArgs = {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  replyTo?: string;
+};
 export type SendResult = { ok: true; id?: string } | { ok: false; reason: string };
 
 export function emailConfigured(): boolean {
@@ -25,6 +31,7 @@ export async function sendEmail({
   subject,
   html,
   text,
+  replyTo,
 }: SendArgs): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY;
   const rawFrom = process.env.RESEND_FROM;
@@ -45,7 +52,14 @@ export async function sendEmail({
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from, to, subject, html, text }),
+      body: JSON.stringify({
+        from,
+        to,
+        subject,
+        html,
+        text,
+        ...(replyTo ? { reply_to: replyTo } : {}),
+      }),
     });
     if (!res.ok) {
       const body = await res.text();

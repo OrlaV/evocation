@@ -1,4 +1,5 @@
 import DocPage, { H2, P } from "@/components/DocPage";
+import { ContactForm } from "@/components/Contact";
 import { pageMeta } from "@/lib/site";
 
 export const metadata = pageMeta({
@@ -21,6 +22,9 @@ export default function ContactPage() {
       >
         contact@evocation.store
       </a>
+
+      <H2>Send us a message</H2>
+      <ContactForm className="mt-4" />
 
       <H2>Before you buy</H2>
       <P>

@@ -6,10 +6,12 @@ import Proof from "@/components/Proof";
 import Process from "@/components/Process";
 import Queue from "@/components/Queue";
 import Guarantee from "@/components/Guarantee";
+import Contact from "@/components/Contact";
 import { getPublishedProducts } from "@/lib/products";
 import { optionRefs } from "@/lib/types";
 import { getHomeStats } from "@/lib/stats";
 import { getQueueBoard, getUserVoteKeys } from "@/lib/queue";
+import { getSettings } from "@/lib/settings";
 import { getUser } from "@/lib/customer-auth";
 import { pageMeta, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/site";
 
@@ -23,11 +25,12 @@ export const metadata = pageMeta({
 
 export default async function Home() {
   // reads the session (cookies) for the queue's auth state → dynamic render
-  const [products, stats, board, user] = await Promise.all([
+  const [products, stats, board, user, settings] = await Promise.all([
     getPublishedProducts(),
     getHomeStats(),
     getQueueBoard(),
     getUser(),
+    getSettings(),
   ]);
   const votedKeys = user ? await getUserVoteKeys(user.id) : [];
   // refs the hero box recognises; a match funnels the visitor to /shop
@@ -67,8 +70,14 @@ export default async function Home() {
         <Ticker items={tickerItems} />
         <Proof />
         <Process />
-        <Queue board={board} isAuthed={!!user} votedKeys={votedKeys} />
+        <Queue
+          board={board}
+          isAuthed={!!user}
+          votedKeys={votedKeys}
+          voteTarget={settings.queueVoteTarget}
+        />
         <Guarantee />
+        <Contact />
       </main>
     </>
   );
