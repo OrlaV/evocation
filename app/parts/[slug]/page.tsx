@@ -188,14 +188,79 @@ export default async function ProductPage({
           <span className="text-brass">PART NO. {product.evo_no}</span>
         </nav>
 
+        {/* one grid, two flowing columns: gallery + story + fitment on the
+            left, summary + questions on the right — so the story sits right
+            under the photo instead of waiting for the taller summary column.
+            On mobile the wrappers collapse (display: contents) and order-*
+            restores gallery → summary → story → fitment → questions. */}
         <div className="grid grid-cols-1 items-start gap-[clamp(28px,4vw,64px)] min-[981px]:grid-cols-[7fr_5fr]">
-          {/* gallery */}
-          <Reveal>
-            <ProductGallery name={product.name} gallery={gallery} />
-          </Reveal>
+          <div className="max-[980px]:contents">
+            {/* gallery */}
+            <Reveal className="max-[980px]:order-1">
+              <ProductGallery name={product.name} gallery={gallery} />
+            </Reveal>
 
+            {/* story */}
+            {product.story_md && (
+              <Reveal className="max-[980px]:order-3 min-[981px]:mt-[clamp(32px,5vh,56px)]">
+                <div className="label-mono mb-4 flex items-center gap-3.5 text-ink-soft after:h-px after:flex-1 after:bg-hairline after:content-['']">
+                  The story
+                </div>
+                {product.story_md.split("\n\n").map((para, i) => (
+                  <p
+                    key={i}
+                    className="mt-4 max-w-[62ch] text-[0.98rem] leading-[1.7] text-ink-soft first:mt-0"
+                  >
+                    {para}
+                  </p>
+                ))}
+              </Reveal>
+            )}
+
+            {/* fitment */}
+            <Reveal className="mt-10 max-[980px]:order-4">
+              <div className="label-mono mb-4 flex items-center gap-3.5 text-ink-soft after:h-px after:flex-1 after:bg-hairline after:content-['']">
+                Fitment
+              </div>
+              <table className="w-full border-collapse border-t border-hairline">
+                <thead>
+                  <tr>
+                    {["Model", "Variant", "Years"].map((h) => (
+                      <th
+                        key={h}
+                        className="label-mono border-b border-hairline py-2.5 pr-2 text-left !text-[0.66rem] !tracking-[0.12em] text-ink-soft"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {product.fitment.map((f, i) => (
+                    <tr key={i}>
+                      <td className="border-b border-hairline py-3 pr-2 text-[0.9rem]">
+                        {f.model}
+                      </td>
+                      <td className="border-b border-hairline py-3 pr-2 text-[0.9rem] text-ink-soft">
+                        {fitmentSpec(f)}
+                      </td>
+                      <td className="border-b border-hairline py-3 font-mono text-[0.8rem]">
+                        {f.years}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="label-mono mt-3 !text-[0.66rem] !tracking-[0.1em] text-ink-soft">
+                Not sure it fits? Email us your chassis number — fits or
+                refunded.
+              </p>
+            </Reveal>
+          </div>
+
+          <div className="max-[980px]:contents">
           {/* summary */}
-          <Reveal delay={0.1}>
+          <Reveal delay={0.1} className="max-[980px]:order-2">
             {(product.badge || product.revived_year) && (
               <span className="label-mono inline-block border border-brg px-2 py-[3px] !text-[0.66rem] text-brg">
                 {[
@@ -318,68 +383,12 @@ export default async function ProductPage({
               </tbody>
             </table>
           </Reveal>
-        </div>
 
-        {/* story + fitment + faq */}
-        <div className="mt-[clamp(48px,7vh,88px)] grid grid-cols-1 gap-[clamp(32px,5vw,80px)] min-[981px]:grid-cols-[7fr_5fr]">
-          <div>
-            {product.story_md && (
-              <Reveal>
-                <div className="label-mono mb-4 flex items-center gap-3.5 text-ink-soft after:h-px after:flex-1 after:bg-hairline after:content-['']">
-                  The story
-                </div>
-                {product.story_md.split("\n\n").map((para, i) => (
-                  <p
-                    key={i}
-                    className="mt-4 max-w-[62ch] text-[0.98rem] leading-[1.7] text-ink-soft first:mt-0"
-                  >
-                    {para}
-                  </p>
-                ))}
-              </Reveal>
-            )}
-
-            <Reveal className="mt-10">
-              <div className="label-mono mb-4 flex items-center gap-3.5 text-ink-soft after:h-px after:flex-1 after:bg-hairline after:content-['']">
-                Fitment
-              </div>
-              <table className="w-full border-collapse border-t border-hairline">
-                <thead>
-                  <tr>
-                    {["Model", "Variant", "Years"].map((h) => (
-                      <th
-                        key={h}
-                        className="label-mono border-b border-hairline py-2.5 pr-2 text-left !text-[0.66rem] !tracking-[0.12em] text-ink-soft"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {product.fitment.map((f, i) => (
-                    <tr key={i}>
-                      <td className="border-b border-hairline py-3 pr-2 text-[0.9rem]">
-                        {f.model}
-                      </td>
-                      <td className="border-b border-hairline py-3 pr-2 text-[0.9rem] text-ink-soft">
-                        {fitmentSpec(f)}
-                      </td>
-                      <td className="border-b border-hairline py-3 font-mono text-[0.8rem]">
-                        {f.years}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="label-mono mt-3 !text-[0.66rem] !tracking-[0.1em] text-ink-soft">
-                Not sure it fits? Email us your chassis number — fits or
-                refunded.
-              </p>
-            </Reveal>
-          </div>
-
-          <Reveal delay={0.1}>
+          {/* questions */}
+          <Reveal
+            delay={0.1}
+            className="max-[980px]:order-5 min-[981px]:mt-[clamp(40px,6vh,72px)]"
+          >
             <div className="label-mono mb-4 flex items-center gap-3.5 text-ink-soft after:h-px after:flex-1 after:bg-hairline after:content-['']">
               Questions
             </div>
@@ -395,6 +404,7 @@ export default async function ProductPage({
               Back to the registry
             </a>
           </Reveal>
+          </div>
         </div>
 
         {/* reviews */}
